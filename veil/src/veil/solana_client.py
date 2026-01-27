@@ -26,15 +26,21 @@ from .token_utils import get_or_create_ata, get_associated_token_address
 # Program ID - replace with actual deployed program ID
 DEFAULT_PROGRAM_ID = "Nyx1111111111111111111111111111111111111111"
 
-# Seeds for PDAs
-POOL_SEED = b"privacy_pool"
+# Seeds for PDAs (must match on-chain program)
+POOL_SEED = b"pool"
 VAULT_SEED = b"vault"
 NULLIFIER_SEED = b"nullifier"
 
 
-def find_pool_pda(program_id: Pubkey) -> Tuple[Pubkey, int]:
-    """Derive the pool PDA address"""
-    return Pubkey.find_program_address([POOL_SEED], program_id)
+def find_pool_pda(program_id: Pubkey, denomination: int = 0) -> Tuple[Pubkey, int]:
+    """Derive the pool PDA address for a specific denomination.
+
+    Args:
+        program_id: The program pubkey
+        denomination: Pool denomination in lamports (0 = custom)
+    """
+    denomination_bytes = denomination.to_bytes(8, byteorder="little")
+    return Pubkey.find_program_address([POOL_SEED, denomination_bytes], program_id)
 
 
 def find_vault_pda(program_id: Pubkey, pool: Pubkey) -> Tuple[Pubkey, int]:
@@ -88,12 +94,13 @@ class InstructionBuilder:
         depositor: Pubkey,
         commitment: bytes,
         amount: int,
+        denomination: int = 0,
     ) -> Instruction:
         """Build shield SOL instruction"""
         if len(commitment) != 32:
             raise ValueError("Commitment must be 32 bytes")
 
-        pool, _pool_bump = find_pool_pda(self.program_id)
+        pool, _pool_bump = find_pool_pda(self.program_id, denomination)
         vault, _vault_bump = find_vault_pda(self.program_id, pool)
 
         accounts = [
@@ -181,12 +188,13 @@ class InstructionBuilder:
         nullifier: bytes,
         amount: int,
         proof: bytes,
+        denomination: int = 0,
     ) -> Instruction:
         """Build unshield SOL instruction"""
         if len(nullifier) != 32:
             raise ValueError("Nullifier must be 32 bytes")
 
-        pool, _pool_bump = find_pool_pda(self.program_id)
+        pool, _pool_bump = find_pool_pda(self.program_id, denomination)
         vault, _vault_bump = find_vault_pda(self.program_id, pool)
         nullifier_marker, _null_bump = find_nullifier_pda(
             self.program_id, pool, nullifier
@@ -460,6 +468,7 @@ class SolanaClient:
         proof: bytes,
         payer_keypair: bytes,
         token: str = "SOL",
+        denomination: int = 0,
     ) -> str:
         """
         Submit unshield transaction
@@ -481,7 +490,7 @@ class SolanaClient:
         if token.upper() == "SOL":
             # Native SOL unshielding
             instruction = self.instruction_builder.unshield_sol(
-                payer.pubkey(), recipient, nullifier, amount, proof
+                payer.pubkey(), recipient, nullifier, amount, proof, denomination
             )
         else:
             # SPL token unshielding with automatic ATA management

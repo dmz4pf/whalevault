@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     solana_rpc_url: str = "https://api.devnet.solana.com"
-    program_id: str = "F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4"
+    program_id: str = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7"
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
     debug: bool = True
 
@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     relayer_keypair_path: str = "relayer-keypair.json"
     relayer_fee_bps: int = 30  # 0.3% fee
     relayer_enabled: bool = True
+
+    # Custom pool enabled
+    custom_pool_enabled: bool = True
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -23,6 +26,21 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+
+# Fixed denomination pools (amount in lamports)
+FIXED_DENOMINATIONS = [
+    {"name": "small", "amount": 100_000_000, "label": "0.1 SOL"},      # 0.1 SOL
+    {"name": "medium", "amount": 1_000_000_000, "label": "1 SOL"},     # 1 SOL
+    {"name": "large", "amount": 10_000_000_000, "label": "10 SOL"},    # 10 SOL
+    {"name": "whale", "amount": 100_000_000_000, "label": "100 SOL"},  # 100 SOL
+]
+
+# Custom pool denomination (0 = variable amount)
+CUSTOM_DENOMINATION = 0
+
+# All valid denominations (including custom)
+ALL_DENOMINATIONS = [d["amount"] for d in FIXED_DENOMINATIONS] + [CUSTOM_DENOMINATION]
 
 
 @lru_cache

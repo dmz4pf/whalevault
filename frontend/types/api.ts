@@ -74,6 +74,21 @@ export interface PoolStatusResponse {
   anonymitySetSize: number;
 }
 
+// Pool info (for denomination pools)
+export interface PoolInfo {
+  denomination: number;  // 0 = custom
+  label: string;
+  name: string;
+  depositCount: number;
+  totalValueLocked: number;
+}
+
+// Pools list response
+export interface PoolsListResponse {
+  pools: PoolInfo[];
+  customEnabled: boolean;
+}
+
 // Health check
 export interface HealthResponse {
   status: string;

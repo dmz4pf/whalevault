@@ -70,6 +70,29 @@ class PoolStatusResponse(BaseModel):
         populate_by_name = True
 
 
+class PoolInfo(BaseModel):
+    """Information about a single denomination pool."""
+
+    denomination: int = Field(..., description="Pool denomination in lamports (0 = custom)")
+    label: str = Field(..., description="Human-readable label (e.g. '1 SOL')")
+    name: str = Field(..., description="Pool name (e.g. 'medium')")
+    deposit_count: int = Field(..., alias="depositCount", description="Number of deposits (anonymity set)")
+    total_value_locked: int = Field(..., alias="totalValueLocked", description="Total SOL in pool (lamports)")
+
+    class Config:
+        populate_by_name = True
+
+
+class PoolsListResponse(BaseModel):
+    """Response listing all available denomination pools."""
+
+    pools: list[PoolInfo] = Field(..., description="List of all pools")
+    custom_enabled: bool = Field(..., alias="customEnabled", description="Whether custom amount pool is available")
+
+    class Config:
+        populate_by_name = True
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
 

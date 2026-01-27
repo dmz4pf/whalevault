@@ -99,6 +99,7 @@ async def relay_unshield(
             recipient=request.recipient,
             amount=job.amount,
             proof=proof_bytes,
+            denomination=job.denomination,
         )
 
         return RelayUnshieldResponse(

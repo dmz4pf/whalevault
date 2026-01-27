@@ -5,7 +5,7 @@ import type { HealthResponse } from "@/types/api";
  * Default program ID - used as fallback if health endpoint is unavailable.
  * In production, this should match the deployed program.
  */
-const DEFAULT_PROGRAM_ID = "F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4";
+const DEFAULT_PROGRAM_ID = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7";
 
 /**
  * Program ID - fetched from backend on initialization.
@@ -78,6 +78,20 @@ export const SUPPORTED_TOKENS: SupportedToken[] = [
 ];
 
 export const LAMPORTS_PER_SOL = 1_000_000_000;
+
+/**
+ * Fixed denomination pools for amount privacy.
+ * Each denomination has its own on-chain pool with separate anonymity set.
+ */
+export const FIXED_DENOMINATIONS = [
+  { value: 100_000_000, label: "0.1 SOL", recommended: false },
+  { value: 1_000_000_000, label: "1 SOL", recommended: true },
+  { value: 10_000_000_000, label: "10 SOL", recommended: false },
+  { value: 100_000_000_000, label: "100 SOL", recommended: false },
+] as const;
+
+export const CUSTOM_AMOUNT_WARNING =
+  "Custom amounts reduce privacy. Fixed denominations provide better anonymity by mixing your deposit with others who deposited the same amount.";
 
 export const APP_NAME = "WhaleVault";
 

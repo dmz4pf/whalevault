@@ -12,8 +12,8 @@ from utils.errors import ValidationError
 # System Program ID (constant)
 SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 
-# Seeds for PDAs (must match Veil SDK)
-POOL_SEED = b"privacy_pool"
+# Seeds for PDAs (must match on-chain program)
+POOL_SEED = b"pool"
 VAULT_SEED = b"vault"
 NULLIFIER_SEED = b"nullifier"
 
@@ -34,9 +34,13 @@ def validate_hex(value: str, field_name: str) -> bytes:
         )
 
 
-def find_pool_pda(program_id: Pubkey) -> Tuple[Pubkey, int]:
-    """Derive the pool PDA address."""
-    return Pubkey.find_program_address([POOL_SEED], program_id)
+def find_pool_pda(program_id: Pubkey, denomination: int = 0) -> Tuple[Pubkey, int]:
+    """Derive the pool PDA address.
+
+    Seeds: [b"pool", denomination_le_bytes]
+    """
+    denomination_bytes = denomination.to_bytes(8, byteorder="little")
+    return Pubkey.find_program_address([POOL_SEED, denomination_bytes], program_id)
 
 
 def find_vault_pda(program_id: Pubkey, pool: Pubkey) -> Tuple[Pubkey, int]:
@@ -205,6 +209,7 @@ class VeilService:
         commitment: str,
         amount: int,
         depositor: str,
+        denomination: int = 0,
     ) -> dict:
         """
         Build the instruction data for a shield transaction.
@@ -213,17 +218,18 @@ class VeilService:
             commitment: Hex-encoded commitment
             amount: Amount in lamports to shield
             depositor: Public key of the depositor
+            denomination: Pool denomination in lamports (0 = custom)
 
         Returns:
             Instruction data dict for Solana transaction
 
         Note:
-            Account order must match Veil SDK's InstructionBuilder.shield_sol():
+            Account order must match Veil program's ShieldSol struct:
             [pool, vault, depositor, system_program]
         """
-        # Parse program ID and derive PDAs
+        # Parse program ID and derive PDAs for the correct denomination pool
         program_pubkey = Pubkey.from_string(self.program_id)
-        pool_pda, _ = find_pool_pda(program_pubkey)
+        pool_pda, _ = find_pool_pda(program_pubkey, denomination)
         vault_pda, _ = find_vault_pda(program_pubkey, pool_pda)
 
         return {
@@ -247,6 +253,7 @@ class VeilService:
         amount: int,
         recipient: str,
         relayer: str,
+        denomination: int = 0,
     ) -> dict:
         """
         Build the instruction data for an unshield transaction.
@@ -257,6 +264,7 @@ class VeilService:
             amount: Amount in lamports to withdraw
             recipient: Recipient wallet address (base58)
             relayer: Relayer/signer wallet address (base58)
+            denomination: Pool denomination in lamports (0 = custom)
 
         Returns:
             Instruction data dict for Solana transaction
@@ -269,9 +277,9 @@ class VeilService:
         import struct
         import base64
 
-        # Parse program ID and derive PDAs
+        # Parse program ID and derive PDAs for the correct denomination pool
         program_pubkey = Pubkey.from_string(self.program_id)
-        pool_pda, _ = find_pool_pda(program_pubkey)
+        pool_pda, _ = find_pool_pda(program_pubkey, denomination)
         vault_pda, _ = find_vault_pda(program_pubkey, pool_pda)
         nullifier_marker_pda, _ = find_nullifier_marker_pda(program_pubkey, pool_pda, nullifier)
 

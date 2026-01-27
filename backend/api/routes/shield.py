@@ -25,6 +25,12 @@ async def prepare_shield(
     If commitment is provided (from frontend wallet signature derivation),
     uses that commitment directly. Otherwise generates commitment and secret
     on the backend (legacy behavior).
+
+    The denomination parameter selects which pool to deposit into:
+    - null/0: Custom pool (any amount)
+    - 100000000: 0.1 SOL fixed pool
+    - 1000000000: 1 SOL fixed pool
+    - 10000000000: 10 SOL fixed pool
     """
     # Check if frontend provided pre-computed commitment
     if request.commitment:
@@ -41,11 +47,15 @@ async def prepare_shield(
         commitment = result.commitment
         secret = result.secret
 
-    # Build instruction data
+    # Determine denomination (null → 0 = custom pool)
+    denomination = request.denomination or 0
+
+    # Build instruction data for the correct denomination pool
     instruction = veil_service.build_shield_instruction(
         commitment=commitment,
         amount=request.amount,
         depositor=request.depositor,
+        denomination=denomination,
     )
 
     # Serialize instruction and fetch blockhash

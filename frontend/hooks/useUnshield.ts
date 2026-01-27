@@ -162,7 +162,8 @@ export function useUnshield(): UseUnshieldReturn {
           position.commitment,
           secret,
           position.amount,
-          recipient
+          recipient,
+          position.denomination,
         );
 
         setState((prev) => ({ ...prev, status: "generating" }));

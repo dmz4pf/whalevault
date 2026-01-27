@@ -11,9 +11,15 @@ import { useWallet } from "@/hooks/useWallet";
 import { useUnshield } from "@/hooks/useUnshield";
 import { useConfetti } from "@/hooks/useConfetti";
 import { usePositionsStore } from "@/stores/positions";
-import { LAMPORTS_PER_SOL } from "@/lib/constants";
+import { LAMPORTS_PER_SOL, FIXED_DENOMINATIONS } from "@/lib/constants";
 import Link from "next/link";
 import type { Position } from "@/types";
+
+function getDenominationLabel(denomination?: number | null): string {
+  if (!denomination) return "Custom";
+  const denom = FIXED_DENOMINATIONS.find((d) => d.value === denomination);
+  return denom ? `${denom.label} Pool` : "Custom";
+}
 
 const STORAGE_KEY = "whalevault_positions";
 
@@ -204,8 +210,13 @@ export default function UnshieldPage() {
                         </span>
                       </div>
                       <div className="text-left">
-                        <div className="font-medium text-white">
-                          {position.token}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-white">
+                            {position.token}
+                          </span>
+                          <span className="text-[10px] font-medium text-whale-400 bg-whale-500/20 px-1.5 py-0.5 rounded">
+                            {getDenominationLabel(position.denomination)}
+                          </span>
                         </div>
                         <div className="text-sm text-gray-400">
                           Shielded{" "}

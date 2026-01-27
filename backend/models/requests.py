@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel, Field, model_validator
 
 
 # Maximum shield/unshield amount: 1000 SOL in lamports
@@ -30,6 +31,21 @@ class ShieldPrepareRequest(BaseModel):
         max_length=64,
         description="Pre-computed commitment from frontend (64 hex characters). If provided, backend won't generate secret.",
     )
+    denomination: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Pool denomination in lamports. null/0 = custom pool. Fixed pools: 100000000 (0.1 SOL), 1000000000 (1 SOL), 10000000000 (10 SOL).",
+    )
+
+    @model_validator(mode="after")
+    def validate_denomination_match(self):
+        """For fixed pools, amount must match denomination exactly."""
+        if self.denomination is not None and self.denomination > 0:
+            if self.amount != self.denomination:
+                raise ValueError(
+                    f"Amount ({self.amount}) must match denomination ({self.denomination}) for fixed pools"
+                )
+        return self
 
 
 class UnshieldProofRequest(BaseModel):
@@ -58,6 +74,11 @@ class UnshieldProofRequest(BaseModel):
         min_length=32,
         max_length=44,
         description="Recipient's Solana public key",
+    )
+    denomination: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Pool denomination in lamports. null/0 = custom pool.",
     )
 
 

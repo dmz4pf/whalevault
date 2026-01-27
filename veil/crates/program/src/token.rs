@@ -144,6 +144,24 @@ pub fn derive_vault_pda(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[VAULT_SEED, pool.as_ref()], program_id)
 }
 
+/// Pool seed prefix for denomination-based pools
+pub const POOL_SEED: &[u8] = b"pool";
+
+/// Derive the pool PDA for a specific denomination
+///
+/// # Arguments
+/// * `program_id` - The program ID
+/// * `denomination` - Fixed deposit amount in lamports (0 = custom pool)
+///
+/// # Returns
+/// Tuple of (pool_pubkey, bump_seed)
+pub fn derive_pool_pda(program_id: &Pubkey, denomination: u64) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[POOL_SEED, &denomination.to_le_bytes()],
+        program_id,
+    )
+}
+
 /// Custom errors for token operations
 #[error_code]
 pub enum TokenError {

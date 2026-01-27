@@ -33,6 +33,7 @@ async def submit_unshield_proof(
         secret=proof_request.secret,
         amount=proof_request.amount,
         recipient=proof_request.recipient,
+        denomination=proof_request.denomination or 0,
     )
 
     return ProofJobResponse(
@@ -89,6 +90,7 @@ async def prepare_unshield(
         amount=job.amount,
         recipient=recipient,
         relayer=request.relayer,
+        denomination=job.denomination,
     )
 
     # Get recent blockhash

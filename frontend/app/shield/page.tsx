@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useWallet } from "@/hooks/useWallet";
 import { useShield } from "@/hooks/useShield";
+import { usePools } from "@/hooks/usePools";
 import { useConfetti } from "@/hooks/useConfetti";
+import { DenominationSelector } from "@/components/shield/DenominationSelector";
+import { PrivacyWarning } from "@/components/shield/PrivacyWarning";
 import { formatAmount } from "@/lib/utils";
 import { SUPPORTED_TOKENS, LAMPORTS_PER_SOL, type SupportedToken } from "@/lib/constants";
 
@@ -16,12 +19,20 @@ export default function ShieldPage() {
   const router = useRouter();
   const { connected, balance } = useWallet();
   const { status, error, txSignature, shield, reset } = useShield();
+  const { pools } = usePools();
   const { fire: fireConfetti } = useConfetti();
 
   const [selectedToken, setSelectedToken] = useState<SupportedToken>(SUPPORTED_TOKENS[0]);
-  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState<"fixed" | "custom">("fixed");
+  const [denomination, setDenomination] = useState<number | null>(1_000_000_000);
+  const [customAmount, setCustomAmount] = useState("");
 
-  const isLoading = status === "preparing" || status === "signing" || status === "confirming";
+  const isLoading = status === "preparing" || status === "signing" || status === "confirming" || status === "deriving";
+
+  const effectiveAmount =
+    mode === "fixed" && denomination
+      ? denomination / LAMPORTS_PER_SOL
+      : parseFloat(customAmount) || 0;
 
   // Handle success/error with toast
   useEffect(() => {
@@ -30,7 +41,7 @@ export default function ShieldPage() {
       toast.success("Assets shielded successfully!", {
         description: `Transaction: ${txSignature?.slice(0, 8)}...`,
       });
-      setAmount("");
+      setCustomAmount("");
       reset();
       setTimeout(() => router.push("/dashboard"), 1500);
     } else if (status === "error" && error) {
@@ -46,23 +57,27 @@ export default function ShieldPage() {
       return;
     }
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (effectiveAmount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
 
-    if (numAmount > balance) {
+    if (effectiveAmount > balance) {
       toast.error("Insufficient balance");
       return;
     }
 
-    const lamports = Math.floor(numAmount * LAMPORTS_PER_SOL);
-    await shield(lamports);
+    const lamports = mode === "fixed" && denomination
+      ? denomination
+      : Math.floor(effectiveAmount * LAMPORTS_PER_SOL);
+
+    await shield(lamports, mode === "fixed" ? denomination : null);
   };
 
   const getButtonText = () => {
     switch (status) {
+      case "deriving":
+        return "Deriving secret...";
       case "preparing":
         return "Preparing transaction...";
       case "signing":
@@ -70,13 +85,9 @@ export default function ShieldPage() {
       case "confirming":
         return "Confirming on chain...";
       default:
-        return amount ? `Shield ${amount} ${selectedToken.symbol}` : "Shield Assets";
-    }
-  };
-
-  const handleMaxClick = () => {
-    if (balance > 0) {
-      setAmount(balance.toString());
+        return effectiveAmount > 0
+          ? `Shield ${effectiveAmount} ${selectedToken.symbol}`
+          : "Shield Assets";
     }
   };
 
@@ -161,30 +172,63 @@ export default function ShieldPage() {
             </div>
           </div>
 
-          {/* Amount Input */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm text-gray-400">Amount</label>
-              <span className="text-sm text-gray-400">
-                Balance: {formatAmount(balance, 4)} {selectedToken.symbol}
-              </span>
-            </div>
-            <div className="relative">
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.0"
-                className="w-full px-4 py-4 pr-20 rounded-xl bg-white/5 border border-white/10 text-white text-xl placeholder:text-gray-500 focus:outline-none focus:border-whale-500 transition-colors"
+          {/* Denomination Selector */}
+          <DenominationSelector
+            selected={mode === "fixed" ? denomination : null}
+            onSelect={(value, newMode) => {
+              setMode(newMode);
+              setDenomination(value);
+              if (newMode === "fixed") setCustomAmount("");
+            }}
+            pools={pools}
+          />
+
+          {/* Custom Amount Input (only in custom mode) */}
+          {mode === "custom" && (
+            <>
+              <PrivacyWarning
+                isCustom
+                onSwitchToFixed={() => {
+                  setMode("fixed");
+                  setDenomination(1_000_000_000);
+                  setCustomAmount("");
+                }}
               />
-              <button
-                onClick={handleMaxClick}
-                className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-whale-500/20 text-whale-400 text-sm font-medium hover:bg-whale-500/30 transition-colors"
-              >
-                MAX
-              </button>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-gray-400">Amount</label>
+                  <span className="text-sm text-gray-400">
+                    Balance: {formatAmount(balance, 4)} {selectedToken.symbol}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder="0.0"
+                    className="w-full px-4 py-4 pr-20 rounded-xl bg-white/5 border border-white/10 text-white text-xl placeholder:text-gray-500 focus:outline-none focus:border-whale-500 transition-colors"
+                  />
+                  <button
+                    onClick={() => balance > 0 && setCustomAmount(balance.toString())}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-whale-500/20 text-whale-400 text-sm font-medium hover:bg-whale-500/30 transition-colors"
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Fixed mode balance display */}
+          {mode === "fixed" && (
+            <div className="flex items-center justify-between text-sm text-gray-400">
+              <span>Balance: {formatAmount(balance, 4)} {selectedToken.symbol}</span>
+              {denomination && denomination / LAMPORTS_PER_SOL > balance && (
+                <span className="text-red-400">Insufficient balance</span>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Info Box */}
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -204,9 +248,9 @@ export default function ShieldPage() {
               </svg>
               <div>
                 <p className="text-sm text-gray-300">
-                  Shielding converts your tokens into a privacy-protected
-                  position. You can unshield at any time to convert back to
-                  regular tokens.
+                  {mode === "fixed"
+                    ? "Fixed denominations mix your deposit with others who deposited the same amount, maximizing privacy."
+                    : "Shielding converts your tokens into a privacy-protected position. You can unshield at any time."}
                 </p>
               </div>
             </div>
@@ -218,7 +262,7 @@ export default function ShieldPage() {
             loading={isLoading}
             fullWidth
             size="lg"
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={effectiveAmount <= 0}
           >
             {getButtonText()}
           </Button>

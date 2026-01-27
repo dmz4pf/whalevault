@@ -35,6 +35,7 @@ class ProofJob:
     secret: str = ""
     amount: int = 0
     recipient: str = ""
+    denomination: int = 0
 
 
 # Constants
@@ -89,6 +90,7 @@ class ProofJobQueue:
         secret: str,
         amount: int,
         recipient: str,
+        denomination: int = 0,
     ) -> ProofJob:
         """Submit a new proof generation job."""
         job_id = str(uuid.uuid4())
@@ -98,6 +100,7 @@ class ProofJobQueue:
             secret=secret,
             amount=amount,
             recipient=recipient,
+            denomination=denomination,
             stage="queued",
         )
 

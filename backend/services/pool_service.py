@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Optional
 import httpx
 
+from config import FIXED_DENOMINATIONS, CUSTOM_DENOMINATION
+
 
 @dataclass
 class PoolStats:
@@ -12,22 +14,36 @@ class PoolStats:
     total_value_locked: int
     total_deposits: int
     anonymity_set_size: int
+    denomination: int  # 0 = custom
 
 
-# Pool PDA seed - must match the Veil program
-POOL_SEED = b"privacy_pool"
+@dataclass
+class DenominationPool:
+    """Info about a specific denomination pool."""
+
+    denomination: int
+    label: str
+    name: str
+    deposit_count: int
+    total_value_locked: int
 
 
-def derive_pool_pda(program_id: str) -> str:
+# Pool PDA seed - must match the on-chain program
+POOL_SEED = b"pool"
+
+
+def derive_pool_pda(program_id: str, denomination: int = 0) -> str:
     """
     Derive the pool PDA address.
 
-    Note: This is a simplified version. In production,
-    use solders.pubkey.Pubkey.find_program_address
+    Seeds: [b"pool", denomination_le_bytes]
     """
-    # For now, return a placeholder - actual implementation needs solders
-    # The real PDA would be derived from seeds + program_id
-    return program_id  # Placeholder
+    from solders.pubkey import Pubkey
+
+    program_pubkey = Pubkey.from_string(program_id)
+    denomination_bytes = denomination.to_bytes(8, byteorder="little")
+    pool_pda, _ = Pubkey.find_program_address([POOL_SEED, denomination_bytes], program_pubkey)
+    return str(pool_pda)
 
 
 class PoolService:
@@ -36,62 +52,83 @@ class PoolService:
     def __init__(self, rpc_url: str, program_id: str):
         self.rpc_url = rpc_url
         self.program_id = program_id
-        self._pool_pda: Optional[str] = None
 
-    async def get_pool_status(self) -> PoolStats:
+    async def get_pool_status(self, denomination: int = 0) -> PoolStats:
         """
-        Get current pool statistics from on-chain data.
+        Get current pool statistics for a specific denomination.
 
-        Queries the Solana program account to get actual pool state.
-        Falls back to zeros if the pool doesn't exist or can't be read.
+        Args:
+            denomination: Pool denomination in lamports (0 = custom)
         """
         try:
-            account_data = await self._fetch_pool_account()
+            account_data = await self._fetch_pool_account(denomination)
             if account_data:
-                return self._parse_pool_data(account_data)
+                stats = self._parse_pool_data(account_data)
+                stats.denomination = denomination
+                return stats
         except Exception as e:
-            print(f"[PoolService] Error fetching pool stats: {e}")
+            print(f"[PoolService] Error fetching pool stats for denom={denomination}: {e}")
 
-        # Return zeros if pool doesn't exist or error occurred
         return PoolStats(
             total_value_locked=0,
             total_deposits=0,
             anonymity_set_size=0,
+            denomination=denomination,
         )
 
-    async def _fetch_pool_account(self) -> Optional[bytes]:
-        """Fetch the pool account data from Solana RPC."""
+    async def get_all_pools(self) -> list[DenominationPool]:
+        """Get status of all denomination pools."""
+        pools = []
+
+        # Fixed denomination pools
+        for denom in FIXED_DENOMINATIONS:
+            stats = await self.get_pool_status(denom["amount"])
+            pools.append(DenominationPool(
+                denomination=denom["amount"],
+                label=denom["label"],
+                name=denom["name"],
+                deposit_count=stats.total_deposits,
+                total_value_locked=stats.total_value_locked,
+            ))
+
+        # Custom pool
+        custom_stats = await self.get_pool_status(CUSTOM_DENOMINATION)
+        pools.append(DenominationPool(
+            denomination=CUSTOM_DENOMINATION,
+            label="Custom",
+            name="custom",
+            deposit_count=custom_stats.total_deposits,
+            total_value_locked=custom_stats.total_value_locked,
+        ))
+
+        return pools
+
+    async def _fetch_pool_account(self, denomination: int = 0) -> Optional[bytes]:
+        """Fetch the pool account data from Solana RPC by denomination."""
+        pool_address = derive_pool_pda(self.program_id, denomination)
+
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get program accounts of the correct type
-            # In production, use the actual pool PDA address
             response = await client.post(
                 self.rpc_url,
                 json={
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "method": "getProgramAccounts",
+                    "method": "getAccountInfo",
                     "params": [
-                        self.program_id,
-                        {
-                            "encoding": "base64",
-                            "filters": [
-                                # Filter by account size or discriminator
-                                # Adjust based on actual Veil program structure
-                                {"dataSize": 256}  # Example size
-                            ],
-                        },
+                        pool_address,
+                        {"encoding": "base64"},
                     ],
                 },
             )
 
             data = response.json()
-            accounts = data.get("result", [])
+            result = data.get("result", {})
+            value = result.get("value")
 
-            if accounts and len(accounts) > 0:
-                # Get the first matching account (should be the pool)
-                account_data_b64 = accounts[0].get("account", {}).get("data", [])
-                if account_data_b64 and len(account_data_b64) > 0:
-                    return base64.b64decode(account_data_b64[0])
+            if value and value.get("data"):
+                account_data = value["data"]
+                if isinstance(account_data, list) and len(account_data) > 0:
+                    return base64.b64decode(account_data[0])
 
         return None
 
@@ -99,28 +136,37 @@ class PoolService:
         """
         Parse pool account data structure.
 
-        Note: The exact structure depends on the Veil program's account layout.
-        This is an example structure - adjust based on actual program.
+        On-chain PrivacyPool layout (after 8-byte Anchor discriminator):
+        - authority: Pubkey (32 bytes)
+        - merkle_tree: IncrementalMerkleTree (680 bytes)
+        - root_history: [[u8; 32]; 10] (320 bytes)
+        - root_history_index: u8 (1 byte)
+        - nullifier_count: u64 (8 bytes)
+        - relayer_fee_bps: u16 (2 bytes)
+        - total_fees_collected: u64 (8 bytes)
+        - bump: u8 (1 byte)
+        - denomination: u64 (8 bytes)
+        - deposit_count: u64 (8 bytes)
 
-        Example layout:
-        - [0:8]   - Discriminator (8 bytes)
-        - [8:16]  - TVL in lamports (u64, 8 bytes)
-        - [16:24] - Total deposits (u64, 8 bytes)
-        - [24:32] - Anonymity set size (u64, 8 bytes)
+        Total before denomination: 8 + 32 + 680 + 320 + 1 + 8 + 2 + 8 + 1 = 1060
         """
-        if len(data) < 32:
-            return PoolStats(0, 0, 0)
+        if len(data) < 1076:  # 1060 + 8 (denomination) + 8 (deposit_count)
+            return PoolStats(0, 0, 0, 0)
 
         try:
-            # Skip 8-byte discriminator, read 3 u64 values
-            tvl = struct.unpack("<Q", data[8:16])[0]
-            deposits = struct.unpack("<Q", data[16:24])[0]
-            anon_size = struct.unpack("<Q", data[24:32])[0]
+            # deposit_count is at offset 1068 (1060 + 8 for denomination)
+            denomination = struct.unpack("<Q", data[1060:1068])[0]
+            deposit_count = struct.unpack("<Q", data[1068:1076])[0]
+
+            # For TVL, we can estimate from deposit_count * denomination (for fixed pools)
+            # or query vault balance directly
+            tvl = deposit_count * denomination if denomination > 0 else 0
 
             return PoolStats(
                 total_value_locked=tvl,
-                total_deposits=int(deposits),
-                anonymity_set_size=int(anon_size),
+                total_deposits=int(deposit_count),
+                anonymity_set_size=int(deposit_count),
+                denomination=int(denomination),
             )
         except struct.error:
-            return PoolStats(0, 0, 0)
+            return PoolStats(0, 0, 0, 0)

@@ -3,13 +3,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-veil_program = "F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4"
+veil_program = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7"
 
 [programs.devnet]
-veil_program = "F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4"
+veil_program = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7"
 
 [programs.mainnet]
-veil_program = "F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4"
+veil_program = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7"
 
 [registry]
 url = "https://api.apr.dev"
