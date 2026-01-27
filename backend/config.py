@@ -30,10 +30,11 @@ class Settings(BaseSettings):
 
 # Fixed denomination pools (amount in lamports)
 FIXED_DENOMINATIONS = [
-    {"name": "small", "amount": 100_000_000, "label": "0.1 SOL"},      # 0.1 SOL
-    {"name": "medium", "amount": 1_000_000_000, "label": "1 SOL"},     # 1 SOL
-    {"name": "large", "amount": 10_000_000_000, "label": "10 SOL"},    # 10 SOL
-    {"name": "whale", "amount": 100_000_000_000, "label": "100 SOL"},  # 100 SOL
+    {"name": "small", "amount": 1_000_000_000, "label": "1 SOL"},       # 1 SOL
+    {"name": "medium", "amount": 10_000_000_000, "label": "10 SOL"},   # 10 SOL
+    {"name": "large", "amount": 100_000_000_000, "label": "100 SOL"},    # 100 SOL
+    {"name": "whale", "amount": 1_000_000_000_000, "label": "1K SOL"},   # 1,000 SOL
+    {"name": "mega", "amount": 10_000_000_000_000, "label": "10K SOL"},  # 10,000 SOL
 ]
 
 # Custom pool denomination (0 = variable amount)

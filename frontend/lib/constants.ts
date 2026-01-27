@@ -84,10 +84,11 @@ export const LAMPORTS_PER_SOL = 1_000_000_000;
  * Each denomination has its own on-chain pool with separate anonymity set.
  */
 export const FIXED_DENOMINATIONS = [
-  { value: 100_000_000, label: "0.1 SOL", recommended: false },
   { value: 1_000_000_000, label: "1 SOL", recommended: true },
   { value: 10_000_000_000, label: "10 SOL", recommended: false },
   { value: 100_000_000_000, label: "100 SOL", recommended: false },
+  { value: 1_000_000_000_000, label: "1K SOL", recommended: false },
+  { value: 10_000_000_000_000, label: "10K SOL", recommended: false },
 ] as const;
 
 export const CUSTOM_AMOUNT_WARNING =
