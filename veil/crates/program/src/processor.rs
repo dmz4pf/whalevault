@@ -16,13 +16,17 @@ use crate::{Initialize, Shield, ShieldSol, Transfer, Unshield, UnshieldSol};
 const MAX_COMMITMENTS: u64 = 1 << TREE_DEPTH;
 
 /// Process Initialize instruction
-pub fn process_initialize(ctx: Context<Initialize>) -> Result<()> {
+///
+/// # Arguments
+/// * `denomination` - Fixed deposit amount in lamports (0 = custom/variable pool)
+pub fn process_initialize(ctx: Context<Initialize>, denomination: u64) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
 
-    // Initialize with real Merkle tree
-    pool.initialize(ctx.accounts.authority.key(), ctx.bumps.pool);
+    // Initialize with real Merkle tree and denomination
+    pool.initialize(ctx.accounts.authority.key(), ctx.bumps.pool, denomination);
 
     msg!("Privacy pool initialized");
+    msg!("Denomination: {} lamports (0 = custom)", denomination);
     msg!("Initial root: {:?}", pool.current_root());
     Ok(())
 }
@@ -31,11 +35,17 @@ pub fn process_initialize(ctx: Context<Initialize>) -> Result<()> {
 pub fn process_shield_sol(ctx: Context<ShieldSol>, commitment: [u8; 32], amount: u64) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
 
-    // Validate
+    // Validate amount
     require!(amount > 0, NyxError::InvalidAmount);
     require!(
         pool.commitment_count() < MAX_COMMITMENTS,
         NyxError::PoolFull
+    );
+
+    // Validate denomination (if fixed pool, amount must match exactly)
+    require!(
+        pool.validate_amount(amount),
+        NyxError::InvalidDenomination
     );
 
     // Transfer SOL from depositor to vault
@@ -51,7 +61,12 @@ pub fn process_shield_sol(ctx: Context<ShieldSol>, commitment: [u8; 32], amount:
     // Add commitment to tree
     let leaf_index = pool.add_commitment(commitment)?;
 
+    // Record deposit for anonymity set tracking
+    pool.record_deposit();
+
     msg!("Shielded {} lamports at index {}", amount, leaf_index);
+    msg!("Pool denomination: {} (0=custom)", pool.denomination);
+    msg!("Pool deposit count: {}", pool.deposit_count);
     msg!("New root: {:?}", pool.current_root());
 
     Ok(())
@@ -61,11 +76,17 @@ pub fn process_shield_sol(ctx: Context<ShieldSol>, commitment: [u8; 32], amount:
 pub fn process_shield(ctx: Context<Shield>, commitment: [u8; 32], amount: u64) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
 
-    // Validate
+    // Validate amount
     require!(amount > 0, NyxError::InvalidAmount);
     require!(
         pool.commitment_count() < MAX_COMMITMENTS,
         NyxError::PoolFull
+    );
+
+    // Validate denomination (if fixed pool, amount must match exactly)
+    require!(
+        pool.validate_amount(amount),
+        NyxError::InvalidDenomination
     );
 
     // Transfer SPL tokens from depositor to vault
@@ -83,7 +104,12 @@ pub fn process_shield(ctx: Context<Shield>, commitment: [u8; 32], amount: u64) -
     // Add commitment to tree
     let leaf_index = pool.add_commitment(commitment)?;
 
+    // Record deposit for anonymity set tracking
+    pool.record_deposit();
+
     msg!("Shielded {} tokens at index {}", amount, leaf_index);
+    msg!("Pool denomination: {} (0=custom)", pool.denomination);
+    msg!("Pool deposit count: {}", pool.deposit_count);
     msg!("New root: {:?}", pool.current_root());
 
     Ok(())

@@ -6,6 +6,7 @@ import type {
   ProofJobResponse,
   ProofStatusResponse,
   PoolStatusResponse,
+  PoolsListResponse,
   HealthResponse,
   APIError,
   RelayerInfoResponse,
@@ -68,11 +69,12 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export async function prepareShield(
   amount: number,
   depositor: string,
-  commitment?: string
+  commitment?: string,
+  denomination?: number | null
 ): Promise<ShieldPrepareResponse> {
   return fetchApi<ShieldPrepareResponse>("/shield/prepare", {
     method: "POST",
-    body: JSON.stringify({ amount, depositor, commitment }),
+    body: JSON.stringify({ amount, depositor, commitment, denomination }),
   });
 }
 
@@ -87,11 +89,12 @@ export async function requestUnshieldProof(
   commitment: string,
   secret: string,
   amount: number,
-  recipient: string
+  recipient: string,
+  denomination?: number | null
 ): Promise<ProofJobResponse> {
   return fetchApi<ProofJobResponse>("/unshield/proof", {
     method: "POST",
-    body: JSON.stringify({ commitment, secret, amount, recipient }),
+    body: JSON.stringify({ commitment, secret, amount, recipient, denomination }),
   });
 }
 
@@ -134,6 +137,13 @@ export async function getProofStatus(jobId: string): Promise<ProofStatusResponse
  */
 export async function getPoolStatus(): Promise<PoolStatusResponse> {
   return fetchApi<PoolStatusResponse>("/pool/status");
+}
+
+/**
+ * Get all denomination pools with their anonymity set sizes
+ */
+export async function fetchPools(): Promise<PoolsListResponse> {
+  return fetchApi<PoolsListResponse>("/pool/pools");
 }
 
 // ---------------------------------------------------------------------------

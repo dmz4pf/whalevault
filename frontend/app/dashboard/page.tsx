@@ -6,18 +6,32 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useWallet } from "@/hooks/useWallet";
 import { usePositionsStore } from "@/stores/positions";
+import { usePools } from "@/hooks/usePools";
 import { getPoolStatus } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
-import { LAMPORTS_PER_SOL } from "@/lib/constants";
+import { LAMPORTS_PER_SOL, FIXED_DENOMINATIONS } from "@/lib/constants";
 import Link from "next/link";
 import type { PoolStatusResponse } from "@/types/api";
 import { SkeletonCard, SkeletonPosition } from "@/components/ui/Skeleton";
 
 const STORAGE_KEY = "whalevault_positions";
 
+function getPrivacyLevel(depositCount: number) {
+  if (depositCount >= 20) return { color: "text-green-400", bg: "bg-green-400", label: "Good privacy" };
+  if (depositCount >= 5) return { color: "text-yellow-400", bg: "bg-yellow-400", label: "Moderate" };
+  return { color: "text-red-400", bg: "bg-red-400", label: "Low privacy" };
+}
+
+function getDenominationLabel(denomination?: number | null): string {
+  if (!denomination) return "Custom";
+  const denom = FIXED_DENOMINATIONS.find((d) => d.value === denomination);
+  return denom ? `${denom.label} Pool` : "Custom";
+}
+
 export default function DashboardPage() {
   const { connected, balance } = useWallet();
   const { positions, setPositions } = usePositionsStore();
+  const { pools, loading: poolsLoading } = usePools();
   const [poolStatus, setPoolStatus] = useState<PoolStatusResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -231,6 +245,48 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Privacy Pools */}
+      {pools.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-4">Privacy Pools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {pools.map((pool) => {
+              const privacy = getPrivacyLevel(pool.depositCount);
+              return (
+                <Card key={pool.denomination}>
+                  <CardContent className="p-5">
+                    <div className="text-lg font-bold text-white mb-3">
+                      {pool.label}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Deposits</span>
+                        <span className="text-white">{pool.depositCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">TVL</span>
+                        <span className="text-white">
+                          {formatSOL(pool.totalValueLocked)} SOL
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Privacy</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${privacy.bg}`} />
+                          <span className={`text-xs ${privacy.color}`}>
+                            {privacy.label}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -273,7 +329,12 @@ export default function DashboardPage() {
                       <span className="text-lg font-bold text-whale-400">S</span>
                     </div>
                     <div>
-                      <div className="font-medium text-white">{position.token}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{position.token}</span>
+                        <span className="text-[10px] font-medium text-whale-400 bg-whale-500/20 px-1.5 py-0.5 rounded">
+                          {getDenominationLabel(position.denomination)}
+                        </span>
+                      </div>
                       <div className="text-sm text-gray-400">
                         {new Date(position.timestamp).toLocaleDateString()}
                       </div>

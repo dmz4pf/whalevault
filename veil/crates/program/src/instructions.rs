@@ -57,6 +57,8 @@ pub enum NyxError {
     PoolFull,
     #[msg("Proof verification failed")]
     ProofVerificationFailed,
+    #[msg("Amount does not match pool denomination")]
+    InvalidDenomination,
 }
 
 impl ShieldData {

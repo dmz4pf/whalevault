@@ -113,6 +113,7 @@ class RelayerService:
         recipient: str,
         amount: int,
         proof: bytes,
+        denomination: int = 0,
     ) -> RelayResult:
         """
         Relay an unshield transaction.
@@ -161,6 +162,7 @@ class RelayerService:
                 proof=proof,
                 payer_keypair=bytes(keypair),
                 token="SOL",
+                denomination=denomination,
             )
         except Exception as e:
             import traceback

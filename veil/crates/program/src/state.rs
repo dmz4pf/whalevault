@@ -50,21 +50,36 @@ pub struct PrivacyPool {
 
     /// Bump seed for PDA
     pub bump: u8,
+
+    /// Fixed denomination for this pool (in lamports)
+    /// 0 = custom amounts allowed (variable pool)
+    /// Non-zero = only this exact amount can be shielded
+    pub denomination: u64,
+
+    /// Number of deposits in this pool (anonymity set size)
+    pub deposit_count: u64,
 }
 
 impl PrivacyPool {
     /// Account size calculation
     pub const SIZE: usize = 32  // authority
         + IncrementalMerkleTree::SIZE  // merkle_tree (680 bytes)
-        + (32 * ROOT_HISTORY_SIZE)  // root_history (960 bytes)
+        + (32 * ROOT_HISTORY_SIZE)  // root_history (320 bytes for 10 roots)
         + 1   // root_history_index
         + 8   // nullifier_count
         + 2   // relayer_fee_bps
         + 8   // total_fees_collected
-        + 1;  // bump
+        + 1   // bump
+        + 8   // denomination
+        + 8;  // deposit_count
 
     /// Initialize a new privacy pool
-    pub fn initialize(&mut self, authority: Pubkey, bump: u8) {
+    ///
+    /// # Arguments
+    /// * `authority` - Pool authority pubkey
+    /// * `bump` - PDA bump seed
+    /// * `denomination` - Fixed deposit amount in lamports (0 = custom/variable)
+    pub fn initialize(&mut self, authority: Pubkey, bump: u8, denomination: u64) {
         self.authority = authority;
         self.merkle_tree = IncrementalMerkleTree::new();
         self.root_history = [[0u8; 32]; ROOT_HISTORY_SIZE];
@@ -73,6 +88,29 @@ impl PrivacyPool {
         self.relayer_fee_bps = DEFAULT_RELAYER_FEE_BPS;
         self.total_fees_collected = 0;
         self.bump = bump;
+        self.denomination = denomination;
+        self.deposit_count = 0;
+    }
+
+    /// Check if this is a fixed denomination pool
+    pub fn is_fixed_denomination(&self) -> bool {
+        self.denomination > 0
+    }
+
+    /// Check if amount matches pool denomination (for fixed pools)
+    pub fn validate_amount(&self, amount: u64) -> bool {
+        if self.denomination == 0 {
+            // Custom pool accepts any amount > 0
+            amount > 0
+        } else {
+            // Fixed pool requires exact match
+            amount == self.denomination
+        }
+    }
+
+    /// Increment deposit count (call after successful shield)
+    pub fn record_deposit(&mut self) {
+        self.deposit_count = self.deposit_count.saturating_add(1);
     }
 
     /// Calculate relayer fee for a given amount

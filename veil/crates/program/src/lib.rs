@@ -8,7 +8,7 @@ use anchor_spl::token::{Token, TokenAccount};
 
 // Valid Base58 program ID (placeholder - replace with actual deployed program ID)
 // Using system program format: 32 bytes = 43-44 Base58 chars
-declare_id!("F3NLgP6kebPXSbH2GxGF39cR6uVdbzFD1V7iTgg7Htp4");
+declare_id!("3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7");
 
 pub mod groth16;
 pub mod instructions;
@@ -23,9 +23,12 @@ pub mod verification;
 pub mod veil_program {
     use super::*;
 
-    /// Initialize the privacy pool
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        processor::process_initialize(ctx)
+    /// Initialize a privacy pool for a specific denomination
+    ///
+    /// # Arguments
+    /// * `denomination` - Fixed deposit amount in lamports (0 = custom/variable pool)
+    pub fn initialize(ctx: Context<Initialize>, denomination: u64) -> Result<()> {
+        processor::process_initialize(ctx, denomination)
     }
 
     /// Shield native SOL - deposit SOL and create commitment
@@ -69,13 +72,20 @@ pub mod veil_program {
     }
 }
 
+// Re-export pool seed from token module
+use token::POOL_SEED;
+
+/// Initialize a new privacy pool with a specific denomination
 #[derive(Accounts)]
+#[instruction(denomination: u64)]
 pub struct Initialize<'info> {
+    /// The pool account, derived from denomination
+    /// Each denomination (0, 0.1 SOL, 1 SOL, 10 SOL) gets its own pool
     #[account(
         init,
         payer = authority,
         space = 8 + state::PrivacyPool::SIZE,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &denomination.to_le_bytes()],
         bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,
@@ -86,12 +96,14 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Shield native SOL
+/// Shield native SOL into a specific denomination pool
 #[derive(Accounts)]
+#[instruction(commitment: [u8; 32], amount: u64)]
 pub struct ShieldSol<'info> {
+    /// The pool for this denomination (denomination is stored in pool.denomination)
     #[account(
         mut,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &pool.denomination.to_le_bytes()],
         bump = pool.bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,
@@ -111,12 +123,14 @@ pub struct ShieldSol<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Shield SPL tokens
+/// Shield SPL tokens into a specific denomination pool
 #[derive(Accounts)]
+#[instruction(commitment: [u8; 32], amount: u64)]
 pub struct Shield<'info> {
+    /// The pool for this denomination
     #[account(
         mut,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &pool.denomination.to_le_bytes()],
         bump = pool.bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,
@@ -149,12 +163,14 @@ pub struct Shield<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+/// Private transfer within a pool
 #[derive(Accounts)]
 #[instruction(nullifier: [u8; 32])]
 pub struct Transfer<'info> {
+    /// The pool for this denomination
     #[account(
         mut,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &pool.denomination.to_le_bytes()],
         bump = pool.bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,
@@ -176,13 +192,14 @@ pub struct Transfer<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Unshield native SOL
+/// Unshield native SOL from a specific denomination pool
 #[derive(Accounts)]
 #[instruction(nullifier: [u8; 32])]
 pub struct UnshieldSol<'info> {
+    /// The pool for this denomination
     #[account(
         mut,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &pool.denomination.to_le_bytes()],
         bump = pool.bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,
@@ -217,13 +234,14 @@ pub struct UnshieldSol<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Unshield SPL tokens
+/// Unshield SPL tokens from a specific denomination pool
 #[derive(Accounts)]
 #[instruction(nullifier: [u8; 32])]
 pub struct Unshield<'info> {
+    /// The pool for this denomination
     #[account(
         mut,
-        seeds = [b"privacy_pool"],
+        seeds = [POOL_SEED, &pool.denomination.to_le_bytes()],
         bump = pool.bump
     )]
     pub pool: Account<'info, state::PrivacyPool>,

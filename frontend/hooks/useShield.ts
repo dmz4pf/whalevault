@@ -32,7 +32,7 @@ export interface ShieldState {
 }
 
 export interface UseShieldReturn extends ShieldState {
-  shield: (amount: number) => Promise<void>;
+  shield: (amount: number, denomination?: number | null) => Promise<void>;
   reset: () => void;
 }
 
@@ -56,7 +56,7 @@ export function useShield(): UseShieldReturn {
   }, []);
 
   const shield = useCallback(
-    async (amount: number) => {
+    async (amount: number, denomination?: number | null) => {
       if (!publicKey) {
         setState({
           status: "error",
@@ -98,7 +98,7 @@ export function useShield(): UseShieldReturn {
         const depositor = publicKey.toBase58();
         console.log("[Shield] Depositor:", depositor);
 
-        const response = await prepareShield(amount, depositor, commitment);
+        const response = await prepareShield(amount, depositor, commitment, denomination);
         console.log("[Shield] API response:", {
           commitment: response.commitment,
           blockhash: response.blockhash,
@@ -152,6 +152,7 @@ export function useShield(): UseShieldReturn {
           commitment: response.commitment,
           nonce: nonce,  // Critical: needed to re-derive secret during unshield
           // secret is intentionally NOT stored - derived on-demand for security
+          denomination: denomination ?? null,
         };
 
         // Persist to localStorage

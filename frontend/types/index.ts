@@ -18,6 +18,8 @@ export interface Position {
    * New positions should NOT have this field.
    */
   secret?: string;
+  /** Denomination in lamports. null/0 = custom pool. */
+  denomination?: number | null;
 }
 
 export interface Transaction {
