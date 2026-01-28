@@ -8,6 +8,7 @@ from proof_queue.job_queue import ProofJobQueue
 from services.veil_service import VeilService
 from services.pool_service import PoolService
 from services.relayer_service import RelayerService, get_relayer_service
+from services.jupiter_service import JupiterService, get_jupiter_service
 
 
 # Singleton instances
@@ -48,3 +49,4 @@ VeilServiceDep = Annotated[VeilService, Depends(get_veil_service)]
 JobQueueDep = Annotated[ProofJobQueue, Depends(get_job_queue)]
 PoolServiceDep = Annotated[PoolService, Depends(get_pool_service)]
 RelayerServiceDep = Annotated[RelayerService, Depends(get_relayer_service)]
+JupiterServiceDep = Annotated[JupiterService, Depends(get_jupiter_service)]

@@ -11,6 +11,9 @@ import type {
   APIError,
   RelayerInfoResponse,
   RelayUnshieldResponse,
+  SwapQuoteResponse,
+  SwapExecuteResponse,
+  SwapTokenInfo,
 } from "@/types/api";
 
 /**
@@ -191,6 +194,45 @@ export async function relayUnshield(
       recipient,
     }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Swap Operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Get a swap quote for converting shielded SOL to another token via Jupiter
+ */
+export async function getSwapQuote(
+  inputMint: string,
+  outputMint: string,
+  amount: number,
+  slippageBps = 100
+): Promise<SwapQuoteResponse> {
+  return fetchApi<SwapQuoteResponse>(
+    `/swap/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+  );
+}
+
+/**
+ * Execute a private swap: unshield + swap in one atomic operation
+ */
+export async function executeSwap(
+  jobId: string,
+  recipient: string,
+  outputMint: string
+): Promise<SwapExecuteResponse> {
+  return fetchApi<SwapExecuteResponse>("/swap/execute", {
+    method: "POST",
+    body: JSON.stringify({ job_id: jobId, recipient, output_mint: outputMint }),
+  });
+}
+
+/**
+ * Get list of supported swap tokens
+ */
+export async function getSwapTokens(): Promise<SwapTokenInfo[]> {
+  return fetchApi<SwapTokenInfo[]>("/swap/tokens");
 }
 
 // ---------------------------------------------------------------------------

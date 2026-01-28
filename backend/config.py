@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     # Custom pool enabled
     custom_pool_enabled: bool = True
 
+    # Jupiter API
+    jupiter_api_url: str = "https://api.jup.ag/swap/v1"
+
+    # Mock pool data (Phase A - before real on-chain seeding)
+    mock_pool_data: bool = True
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS origins into a list."""

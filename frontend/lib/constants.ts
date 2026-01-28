@@ -68,13 +68,6 @@ export const SUPPORTED_TOKENS: SupportedToken[] = [
     decimals: 9,
     logoUri: "/tokens/sol.png",
   },
-  {
-    symbol: "USDC",
-    name: "USD Coin",
-    mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-    decimals: 6,
-    logoUri: "/tokens/usdc.png",
-  },
 ];
 
 export const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -98,3 +91,10 @@ export const APP_NAME = "WhaleVault";
 
 export const APP_DESCRIPTION =
   "Privacy-preserving vault for Solana. Shield your assets with zero-knowledge proofs.";
+
+export const PROOF_POLLING_CONFIG = {
+  initialDelayMs: 500,
+  maxDelayMs: 5000,
+  maxAttempts: 120,
+  backoffMultiplier: 1.3,
+} as const;

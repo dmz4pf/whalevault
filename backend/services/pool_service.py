@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 import httpx
 
-from config import FIXED_DENOMINATIONS, CUSTOM_DENOMINATION
+from config import FIXED_DENOMINATIONS, CUSTOM_DENOMINATION, get_settings
 
 
 @dataclass
@@ -78,6 +78,10 @@ class PoolService:
 
     async def get_all_pools(self) -> list[DenominationPool]:
         """Get status of all denomination pools."""
+        settings = get_settings()
+        if settings.mock_pool_data:
+            return self._get_mock_pools()
+
         pools = []
 
         # Fixed denomination pools
@@ -102,6 +106,18 @@ class PoolService:
         ))
 
         return pools
+
+    @staticmethod
+    def _get_mock_pools() -> list[DenominationPool]:
+        """Mock pool data for Phase A development."""
+        return [
+            DenominationPool(denomination=1_000_000_000, label="1 SOL", name="small", deposit_count=47, total_value_locked=47_000_000_000),
+            DenominationPool(denomination=10_000_000_000, label="10 SOL", name="medium", deposit_count=32, total_value_locked=320_000_000_000),
+            DenominationPool(denomination=100_000_000_000, label="100 SOL", name="large", deposit_count=12, total_value_locked=1_200_000_000_000),
+            DenominationPool(denomination=1_000_000_000_000, label="1K SOL", name="whale", deposit_count=5, total_value_locked=5_000_000_000_000),
+            DenominationPool(denomination=10_000_000_000_000, label="10K SOL", name="mega", deposit_count=2, total_value_locked=20_000_000_000_000),
+            DenominationPool(denomination=0, label="Custom", name="custom", deposit_count=8, total_value_locked=15_000_000_000),
+        ]
 
     async def _fetch_pool_account(self, denomination: int = 0) -> Optional[bytes]:
         """Fetch the pool account data from Solana RPC by denomination."""
