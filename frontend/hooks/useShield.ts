@@ -119,43 +119,53 @@ export function useShield(): UseShieldReturn {
         );
         console.log("[Shield] Transaction built with blockhash:", response.blockhash);
 
-        // Step 5: Sign and send transaction
-        setState((prev) => ({ ...prev, status: "signing" }));
-        console.log("[Shield] Requesting wallet signature for transaction...");
-
-        const signature = await signAndSend(transaction, wallet, connection);
-        console.log("[Shield] Transaction sent, signature:", signature);
-
-        // Step 6: Wait for on-chain confirmation
-        setState((prev) => ({ ...prev, status: "confirming" }));
-        console.log("[Shield] Waiting for transaction confirmation...");
-
-        const confirmed = await waitForTransactionConfirmation(signature, 30, 1000);
-        if (!confirmed) {
-          throw new Error(
-            "Transaction was not confirmed on-chain. Please check your wallet and try again."
-          );
-        }
-        console.log("[Shield] Transaction confirmed on-chain");
-
-        // Step 7: Create position record with nonce (for future unshield)
-        // NOTE: Secret is NOT stored - it's derived from nonce + wallet signature
+        // Step 5: Save position BEFORE sending transaction (critical for recovery)
+        // If transaction succeeds but app crashes, we still have the nonce
         const position: Position = {
           id: response.commitment,
           token: "SOL",
           amount: amount,
           shieldedAmount: amount,
           timestamp: Date.now(),
-          status: "shielded",
+          status: "pending",  // Will update to "shielded" after confirmation
           commitment: response.commitment,
           nonce: nonce,  // Critical: needed to re-derive secret during unshield
-          // secret is intentionally NOT stored - derived on-demand for security
           denomination: denomination ?? null,
           delayUntil: delayMs ? new Date(Date.now() + delayMs).toISOString() : null,
         };
-
-        // Update store (persist middleware handles localStorage + cloud sync)
         addPosition(position);
+        console.log("[Shield] Position saved with status 'pending' (recovery-safe)");
+
+        // Step 6: Sign and send transaction
+        setState((prev) => ({ ...prev, status: "signing" }));
+        console.log("[Shield] Requesting wallet signature for transaction...");
+
+        let signature: string;
+        try {
+          signature = await signAndSend(transaction, wallet, connection);
+          console.log("[Shield] Transaction sent, signature:", signature);
+        } catch (sendError) {
+          // Transaction failed to send - remove pending position
+          usePositionsStore.getState().removePosition(response.commitment);
+          throw sendError;
+        }
+
+        // Step 7: Wait for on-chain confirmation
+        setState((prev) => ({ ...prev, status: "confirming" }));
+        console.log("[Shield] Waiting for transaction confirmation...");
+
+        const confirmed = await waitForTransactionConfirmation(signature, 30, 1000);
+        if (!confirmed) {
+          // Transaction may have failed - mark position as failed (don't delete, user can retry)
+          usePositionsStore.getState().updatePosition(response.commitment, { status: "failed" });
+          throw new Error(
+            "Transaction was not confirmed on-chain. Please check your wallet and try again."
+          );
+        }
+        console.log("[Shield] Transaction confirmed on-chain");
+
+        // Step 8: Update position status to shielded
+        usePositionsStore.getState().updatePosition(response.commitment, { status: "shielded" });
 
         // Create transaction record
         const txRecord: Transaction = {
