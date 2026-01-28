@@ -98,6 +98,35 @@ export interface HealthResponse {
   programId: string;
 }
 
+// Swap Operations
+export interface SwapQuoteResponse {
+  inputMint: string;
+  outputMint: string;
+  inAmount: string;
+  outAmount: string;
+  priceImpactPct: string;
+  slippageBps: number;
+  minimumReceived: string;
+  route?: string;
+}
+
+export interface SwapExecuteResponse {
+  unshieldSignature: string;
+  swapSignature: string;
+  outputAmount: string;
+  outputMint: string;
+  recipient: string;
+  fee: number;
+}
+
+export interface SwapTokenInfo {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  logoUri: string | null;
+}
+
 // API Error
 export interface APIError {
   code: string;
