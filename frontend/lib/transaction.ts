@@ -6,6 +6,7 @@ import {
   type Commitment,
 } from "@solana/web3.js";
 import type { WalletContextState } from "@solana/wallet-adapter-react";
+import bs58 from "bs58";
 import type { SerializedInstruction } from "@/types/api";
 
 /**
@@ -123,6 +124,22 @@ export async function signAndSend(
       // Don't retry user rejections
       if (lastError.message.includes("User rejected")) {
         throw new TransactionError("User rejected the transaction", lastError);
+      }
+
+      // "Already processed" means transaction succeeded - extract signature and verify
+      if (lastError.message.includes("already been processed")) {
+        console.log("[Transaction] Transaction may have already succeeded, checking on-chain...");
+        // The transaction was processed - try to get the signature from the signed tx
+        try {
+          const signature = bs58.encode(signedTx.signature!);
+          const status = await connection.getSignatureStatus(signature);
+          if (status.value?.confirmationStatus) {
+            console.log("[Transaction] Transaction confirmed on-chain:", signature);
+            return signature;
+          }
+        } catch {
+          // If we can't verify, continue with error
+        }
       }
 
       // Exponential backoff before retry

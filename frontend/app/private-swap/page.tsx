@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -56,12 +56,14 @@ export default function PrivateSwapPage() {
   const [selectedToken, setSelectedToken] = useState<FeaturedToken | null>(null);
   const [recipientAddress, setRecipientAddress] = useState<string>("");
 
-  // Prefill recipient with connected wallet
+  // Auto-fill recipient only once when wallet connects
+  const didAutoFill = useRef(false);
   useEffect(() => {
-    if (publicKey && !recipientAddress) {
+    if (publicKey && !didAutoFill.current) {
       setRecipientAddress(publicKey);
+      didAutoFill.current = true;
     }
-  }, [publicKey, recipientAddress]);
+  }, [publicKey]);
 
   const shieldedPositions = storePositions.filter((p) => p.status === "shielded");
 

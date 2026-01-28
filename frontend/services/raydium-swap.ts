@@ -14,9 +14,8 @@ interface RaydiumRoutePlan {
   lastPoolPriceX64: string;
 }
 
-export type RaydiumComputeData = RaydiumComputeResponse["data"];
-
-interface RaydiumComputeResponse {
+// Full response type - Raydium API expects this entire object for transaction building
+export interface RaydiumComputeResponse {
   id: string;
   success: boolean;
   version: string;
@@ -52,7 +51,7 @@ export async function getRaydiumQuote(
   outputMint: string,
   amountLamports: number,
   slippageBps = 100
-): Promise<{ quote: SwapQuoteResponse; rawResponse: RaydiumComputeResponse["data"] }> {
+): Promise<{ quote: SwapQuoteResponse; rawResponse: RaydiumComputeResponse }> {
   const url = new URL(`${RAYDIUM_DEVNET_SWAP_HOST}/compute/swap-base-in`);
   url.searchParams.set("inputMint", inputMint);
   url.searchParams.set("outputMint", outputMint);
@@ -81,15 +80,19 @@ export async function getRaydiumQuote(
     route: "raydium-devnet",
   };
 
-  return { quote, rawResponse: data.data };
+  // Return full response - Raydium's transaction API expects the entire object
+  return { quote, rawResponse: data };
 }
 
 /**
  * Build a Raydium swap transaction via the devnet Trade API.
  * Returns a base64-encoded versioned transaction for the user to sign.
+ *
+ * IMPORTANT: swapResponse must be the FULL quote response object (with id, success, version, data),
+ * not just the .data portion. Raydium's API validates the entire response structure.
  */
 export async function buildRaydiumSwapTransaction(
-  swapResponse: RaydiumComputeResponse["data"],
+  swapResponse: RaydiumComputeResponse,
   walletPublicKey: string
 ): Promise<string> {
   const res = await fetch(`${RAYDIUM_DEVNET_SWAP_HOST}/transaction/swap-base-in`, {
@@ -100,6 +103,8 @@ export async function buildRaydiumSwapTransaction(
       swapResponse,
       wallet: walletPublicKey,
       txVersion: "V0",
+      wrapSol: true,    // Auto-wrap native SOL to wSOL for swap
+      unwrapSol: true,  // Auto-unwrap wSOL back to native SOL after swap
     }),
   });
 
@@ -109,6 +114,7 @@ export async function buildRaydiumSwapTransaction(
   const data: RaydiumTransactionResponse = await res.json();
 
   if (!data.success || !data.data || data.data.length === 0) {
+    console.error("[Raydium] Transaction build failed:", data);
     throw new Error(data.msg || "Failed to build Raydium swap transaction");
   }
 

@@ -12,7 +12,7 @@ import {
   relayUnshield,
 } from "@/lib/api";
 import { getRaydiumQuote, buildRaydiumSwapTransaction } from "@/services/raydium-swap";
-import type { RaydiumComputeData } from "@/services/raydium-swap";
+import type { RaydiumComputeResponse } from "@/services/raydium-swap";
 import { waitForTransactionConfirmation } from "@/lib/verification";
 import { usePositionsStore } from "@/stores/positions";
 import { useTransactionsStore } from "@/stores/transactions";
@@ -76,7 +76,7 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
 
   const [state, setState] = useState<SwapState>(INITIAL_STATE);
   const abortRef = useRef(false);
-  const raydiumResponseRef = useRef<RaydiumComputeData | null>(null);
+  const raydiumResponseRef = useRef<RaydiumComputeResponse | null>(null);
 
   const reset = useCallback(() => {
     abortRef.current = true;
@@ -199,12 +199,10 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
         unshieldSignature,
       }));
 
-      // Use cached quote data, or re-fetch if missing
-      let swapData = raydiumResponseRef.current;
-      if (!swapData) {
-        const { rawResponse } = await getRaydiumQuote(SOL_MINT, outputMint, position.amount);
-        swapData = rawResponse;
-      }
+      // Always fetch fresh quote - cached data is stale after unshield
+      console.log("[PrivateSwap] Fetching fresh Raydium quote after unshield...");
+      const { rawResponse } = await getRaydiumQuote(SOL_MINT, outputMint, position.amount);
+      const swapData = rawResponse;
 
       const serializedTx = await buildRaydiumSwapTransaction(
         swapData,
