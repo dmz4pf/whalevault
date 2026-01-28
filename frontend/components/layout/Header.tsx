@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/shield", label: "Shield" },
-  { href: "/unshield", label: "Unshield" },
+  { href: "/unshield", label: "Stealth Withdraw" },
+  { href: "/private-swap", label: "Private Swap" },
   { href: "/history", label: "History" },
 ];
 

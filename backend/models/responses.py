@@ -132,6 +132,48 @@ class RelayerInfoResponse(BaseModel):
         populate_by_name = True
 
 
+class SwapQuoteResponse(BaseModel):
+    """Response containing a Jupiter swap quote."""
+
+    input_mint: str = Field(..., alias="inputMint")
+    output_mint: str = Field(..., alias="outputMint")
+    in_amount: str = Field(..., alias="inAmount")
+    out_amount: str = Field(..., alias="outAmount")
+    price_impact_pct: str = Field(..., alias="priceImpactPct")
+    slippage_bps: int = Field(..., alias="slippageBps")
+    minimum_received: str = Field(..., alias="minimumReceived")
+
+    class Config:
+        populate_by_name = True
+
+
+class SwapExecuteResponse(BaseModel):
+    """Response from executing a private swap."""
+
+    unshield_signature: str = Field(..., alias="unshieldSignature")
+    swap_signature: str = Field(..., alias="swapSignature")
+    output_amount: str = Field(..., alias="outputAmount")
+    output_mint: str = Field(..., alias="outputMint")
+    recipient: str
+    fee: int
+
+    class Config:
+        populate_by_name = True
+
+
+class SwapTokenInfo(BaseModel):
+    """Token metadata from Jupiter."""
+
+    address: str
+    symbol: str
+    name: str
+    decimals: int
+    logo_uri: Optional[str] = Field(None, alias="logoUri")
+
+    class Config:
+        populate_by_name = True
+
+
 class ComputeCommitmentResponse(BaseModel):
     """Response containing the computed commitment."""
 

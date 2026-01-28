@@ -20,6 +20,13 @@ export interface Position {
   secret?: string;
   /** Denomination in lamports. null/0 = custom pool. */
   denomination?: number | null;
+  poolAddress?: string;
+  shieldTxSig?: string;
+  unshieldTxSig?: string | null;
+  swapOutputToken?: string | null;
+  swapOutputAmount?: number | null;
+  spentAt?: string | null;
+  delayUntil?: string | null;
 }
 
 export interface Transaction {
@@ -51,6 +58,8 @@ export interface PositionsState {
   positions: Position[];
   loading: boolean;
   error: string | null;
+  syncing: boolean;
+  lastSynced: string | null;
 }
 
 export type NetworkType = "mainnet-beta" | "devnet" | "testnet";

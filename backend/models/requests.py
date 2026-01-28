@@ -118,6 +118,27 @@ class RelayUnshieldRequest(BaseModel):
     )
 
 
+class SwapExecuteRequest(BaseModel):
+    """Request to execute a private swap (unshield + swap via Jupiter)."""
+
+    job_id: str = Field(
+        ...,
+        description="Proof job ID from /unshield/proof",
+    )
+    recipient: str = Field(
+        ...,
+        min_length=32,
+        max_length=44,
+        description="Recipient address for swapped tokens",
+    )
+    output_mint: str = Field(
+        ...,
+        min_length=32,
+        max_length=44,
+        description="Output token mint address",
+    )
+
+
 class ComputeCommitmentRequest(BaseModel):
     """Request to compute a commitment from amount and secret."""
 

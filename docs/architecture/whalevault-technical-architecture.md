@@ -1,22 +1,28 @@
 
 c1 # WhaleVault Technical Architecture
 
-**Version:** 1.0
-**Date:** January 25, 2026
-**Status:** Design Complete - Ready for Implementation
+**Version:** 3.0
+**Date:** January 27, 2026 (updated from v1.0 Jan 25)
+**Status:** V1+V2 Implemented, V3 In Progress
 
 ---
 
 ## 1. Executive Summary
 
-WhaleVault is a privacy-first treasury migration tool for Solana that enables large holders to shield, transfer, and unshield SOL using zero-knowledge proofs. This document provides the complete technical specification for building a working hackathon demo in approximately one week.
+WhaleVault is a privacy-first treasury migration tool for Solana that enables large holders to shield SOL, stealth withdraw to new addresses, and perform private swaps to any token — all using zero-knowledge proofs.
 
-The architecture follows a three-tier pattern:
-1. **Frontend (Next.js 14)** - User interface and wallet interaction
-2. **Backend (FastAPI)** - Proof generation and state management via Veil SDK
-3. **On-chain (Anchor)** - Privacy pool with ZK verification
+The architecture follows a five-component pattern:
+1. **Frontend (Next.js 14)** — UI, wallet interaction, client-side encryption
+2. **Backend (FastAPI)** — Proof generation, relayer, swap execution via Veil SDK
+3. **On-chain (Anchor)** — Multi-pool privacy vaults with ZK verification
+4. **Supabase** — Encrypted position backup (zero-knowledge to server)
+5. **Jupiter API** — Token swap routing for Private Swap feature
 
-Key design decision: The backend handles all cryptographic operations (commitment generation, proof generation) because the Veil SDK uses Rust FFI which cannot run in browser. The frontend is responsible only for wallet signing and UI state.
+Key design decisions:
+- Backend handles all cryptographic operations (Veil SDK uses Rust FFI, can't run in browser)
+- Relayer submits withdraw/swap txs so user's wallet is never linked to the output
+- All position data encrypted client-side (AES-256-GCM) before syncing to Supabase
+- Supabase only sees wallet hash + encrypted blob — cannot read any position data
 
 ---
 
@@ -41,15 +47,17 @@ Key design decision: The backend handles all cryptographic operations (commitmen
 2. **A2**: Devnet RPC is available and responsive (<2s latency)
 3. **A3**: Proof generation completes within 30 seconds
 4. **A4**: User keeps browser tab open during proof generation
-5. **A5**: One pool instance per deployment (no multi-pool support)
-6. **A6**: User trusts the backend with commitment secrets (acceptable for hackathon MVP)
+5. **A5**: Wallet signature is deterministic across sessions (same message → same key for encryption)
+6. **A6**: Jupiter API is available for swap quotes and execution
 
 ### 2.4 Constraints
 - Program size: 307KB (within 500KB limit)
 - Compute units: ~200k per verification
-- Merkle tree depth: 20 (supports 2^20 = ~1M commitments)
+- Merkle tree depth: 20 (supports 2^20 = ~1M commitments per pool)
 - MVP uses signature-based proofs (96 bytes: 64 sig + 32 pubkey)
-- No relayer - user pays own gas
+- Relayer keypair managed by backend — single point of failure for withdrawals
+- SOL-only shielding (SPL token deposits not supported; output via Jupiter swap only)
+- Fixed denomination pools: 1, 10, 100, 1000 SOL
 
 ---
 
@@ -255,6 +263,126 @@ Backend health check.
 
 ---
 
+#### GET /api/pool/status/{denomination} *(V2)*
+Get statistics for a specific denomination pool.
+
+**Response:**
+```typescript
+{
+  "success": true,
+  "data": {
+    "denomination": number,          // Lamports (e.g. 1_000_000_000 = 1 SOL)
+    "totalValueLocked": number,
+    "totalDeposits": number,
+    "anonymitySetSize": number,
+    "merkleRoot": string,
+    "poolAddress": string,
+    "vaultAddress": string
+  }
+}
+```
+
+---
+
+#### GET /api/relay/info *(V2)*
+Get relayer status and fee information.
+
+**Response:**
+```typescript
+{
+  "success": true,
+  "data": {
+    "relayerAddress": string,
+    "feeBps": number,               // Fee in basis points (e.g. 50 = 0.5%)
+    "balance": number,              // Relayer SOL balance in lamports
+    "status": "ready" | "busy" | "low_balance"
+  }
+}
+```
+
+---
+
+#### POST /api/relay/unshield *(V2)*
+Submit withdrawal via relayer. User never signs the unshield transaction.
+
+**Request:**
+```typescript
+{
+  "commitment": string,
+  "secret": string,
+  "amount": number,
+  "recipient": string,
+  "denomination": number
+}
+```
+
+**Response:**
+```typescript
+{
+  "success": true,
+  "data": {
+    "jobId": string,
+    "status": "pending"
+  }
+}
+```
+
+---
+
+#### GET /api/swap/quote *(V3)*
+Get Jupiter swap quote for SOL → token.
+
+**Request (query params):**
+```
+?amount={lamports}&outputMint={mint}
+```
+
+**Response:**
+```typescript
+{
+  "success": true,
+  "data": {
+    "outputAmount": number,          // Output in token's smallest unit
+    "rate": number,                  // Exchange rate
+    "slippage": number,              // Expected slippage %
+    "priceImpact": number,           // Price impact %
+    "fee": number                    // Fee in lamports
+  }
+}
+```
+
+---
+
+#### POST /api/swap/execute *(V3)*
+Execute private swap: unshield SOL → swap via Jupiter → send token to recipient.
+
+**Request:**
+```typescript
+{
+  "commitment": string,
+  "secret": string,
+  "amount": number,
+  "recipient": string,
+  "outputMint": string,
+  "denomination": number
+}
+```
+
+**Response:**
+```typescript
+{
+  "success": true,
+  "data": {
+    "jobId": string,
+    "status": "pending"
+  }
+}
+```
+
+The job follows the same polling pattern as proof generation via `GET /api/proof/status/{jobId}`.
+
+---
+
 ### 3.4 Error Codes Reference
 
 | Code | HTTP Status | Description |
@@ -340,38 +468,84 @@ interface UnshieldState {
   reset: () => void;
 }
 
-// stores/positions.ts
+// types/position.ts — V3 (updated for multi-pool, Supabase, swaps, delays)
 interface Position {
-  id: string;  // Local UUID
+  id: string;
   commitment: string;
-  secret: string;  // Encrypted in localStorage
+  secret: string;
   amount: number;
-  createdAt: string;
-  txSignature: string;
+  denomination: number;            // Pool denomination in lamports
+  poolAddress: string;             // Pool PDA address
   status: 'pending' | 'confirmed' | 'spent';
+  shieldTxSig: string;
+  unshieldTxSig: string | null;
+  swapOutputToken: string | null;  // Token symbol if private swap
+  swapOutputAmount: number | null; // Output amount if private swap
+  createdAt: string;
+  spentAt: string | null;
+  delayUntil: string | null;       // Privacy delay expiry (ISO 8601)
 }
 
-interface PositionsState {
+// stores/vaultStorage.ts — V3 (replaces localStorage with Supabase)
+interface VaultStorageState {
   positions: Position[];
   loading: boolean;
+  syncing: boolean;
+  lastSynced: string | null;
 
   // Actions
-  addPosition: (position: Omit<Position, 'id'>) => void;
-  markSpent: (commitment: string) => void;
-  loadFromStorage: () => void;
-  saveToStorage: () => void;
+  loadFromSupabase: () => Promise<void>;
+  saveToSupabase: () => Promise<void>;
+  addPosition: (position: Position) => Promise<void>;
+  updatePosition: (commitment: string, updates: Partial<Position>) => Promise<void>;
 }
 
-// stores/pool.ts
-interface PoolState {
+// stores/privateSwap.ts — V3
+interface SwapQuote {
+  outputAmount: number;
+  rate: number;
+  slippage: number;
+  priceImpact: number;
+  fee: number;
+}
+
+interface PrivateSwapState {
+  selectedPosition: Position | null;
+  recipient: string;
+  outputMint: string | null;
+  quote: SwapQuote | null;
+  status: 'idle' | 'quoting' | 'generating' | 'swapping' | 'success' | 'error';
+  jobId: string | null;
+  progress: number;
+  txSignatures: string[];
+  error: string | null;
+
+  // Actions
+  selectPosition: (position: Position) => void;
+  setRecipient: (address: string) => void;
+  setOutputMint: (mint: string) => void;
+  fetchQuote: () => Promise<void>;
+  executeSwap: () => Promise<void>;
+  reset: () => void;
+}
+
+// stores/pool.ts — V2 (updated for multi-pool)
+interface PoolStats {
+  denomination: number;
   totalValueLocked: number;
   totalDeposits: number;
   anonymitySetSize: number;
+  poolAddress: string;
+}
+
+interface PoolState {
+  pools: PoolStats[];              // Stats per denomination
   loading: boolean;
   lastUpdated: string | null;
 
   // Actions
-  fetchPoolStatus: () => Promise<void>;
+  fetchAllPoolStats: () => Promise<void>;
+  fetchPoolStats: (denomination: number) => Promise<void>;
 }
 ```
 
@@ -484,6 +658,46 @@ class HealthResponse(BaseModel):
     solana_connection: str
     rpc_latency: int
     proof_worker_status: str
+
+
+# V2 additions — Relay models
+class RelayUnshieldRequest(BaseModel):
+    commitment: str
+    secret: str
+    amount: int
+    recipient: str
+    denomination: int
+
+class RelayInfoResponse(BaseModel):
+    relayer_address: str
+    fee_bps: int
+    balance: int
+    status: str  # "ready" | "busy" | "low_balance"
+
+
+# V3 additions — Swap models
+class SwapQuoteRequest(BaseModel):
+    amount: int = Field(..., gt=0)
+    output_mint: str = Field(..., min_length=32, max_length=44)
+
+class SwapExecuteRequest(BaseModel):
+    commitment: str = Field(..., min_length=64, max_length=64)
+    secret: str = Field(..., min_length=64, max_length=64)
+    amount: int = Field(..., gt=0)
+    recipient: str = Field(..., min_length=32, max_length=44)
+    output_mint: str = Field(..., min_length=32, max_length=44)
+    denomination: int = Field(..., gt=0)
+
+class SwapQuoteResponse(BaseModel):
+    output_amount: int
+    rate: float
+    slippage: float
+    price_impact: float
+    fee: int
+
+class SwapExecuteResponse(BaseModel):
+    job_id: str
+    status: str
 ```
 
 ### 4.3 On-Chain Account Structures
@@ -512,8 +726,8 @@ pub struct NullifierMarker {
     pub spent_at: u64,          // 8 bytes (slot number)
 }
 
-/// PDA Derivations:
-/// - Pool: Pubkey::find_program_address(["privacy_pool"], program_id)
+/// PDA Derivations (V2: multi-pool, keyed by denomination):
+/// - Pool: Pubkey::find_program_address(["privacy_pool", &denomination.to_le_bytes()], program_id)
 /// - Vault: Pubkey::find_program_address(["vault", pool.key()], program_id)
 /// - Nullifier: Pubkey::find_program_address(["nullifier", pool.key(), nullifier], program_id)
 ```
@@ -908,6 +1122,97 @@ Total time: ~20-45 seconds
 - Step 12-13: ~2-5s (on-chain confirmation)
 ```
 
+### 7.3 Relayer Unshield Flow *(V2)*
+
+```
+┌──────┐          ┌──────────┐          ┌──────────┐          ┌────────┐
+│ User │          │ Frontend │          │ Backend  │          │ Solana │
+└──┬───┘          └────┬─────┘          └────┬─────┘          └───┬────┘
+   │                   │                     │                    │
+   │ 1. Select position│                     │                    │
+   │    Enter recipient│                     │                    │
+   │ ─────────────────>│                     │                    │
+   │                   │                     │                    │
+   │                   │ 2. POST /relay/unshield                  │
+   │                   │ ───────────────────>│                    │
+   │                   │                     │                    │
+   │                   │ 3. { jobId }        │ [Generate proof]   │
+   │                   │ <───────────────────│                    │
+   │                   │                     │                    │
+   │                   │   ... poll ...      │ [Proof ready]      │
+   │                   │                     │                    │
+   │                   │                     │ 4. Relayer signs   │
+   │                   │                     │    unshield tx     │
+   │                   │                     │ ──────────────────>│
+   │                   │                     │                    │
+   │                   │                     │    [Verify proof]  │
+   │                   │                     │    [Transfer SOL]  │
+   │                   │                     │                    │
+   │                   │ 5. { status:        │                    │
+   │                   │    completed,       │                    │
+   │                   │    txSignature }    │                    │
+   │                   │ <───────────────────│                    │
+   │                   │                     │                    │
+   │ 6. Success!       │                     │                    │
+   │ <─────────────────│                     │                    │
+
+Key difference from V1: User NEVER signs the unshield tx.
+The relayer submits on their behalf, breaking the on-chain link.
+```
+
+### 7.4 Private Swap Flow *(V3)*
+
+```
+┌──────┐          ┌──────────┐          ┌──────────┐   ┌─────────┐   ┌────────┐
+│ User │          │ Frontend │          │ Backend  │   │ Jupiter │   │ Solana │
+└──┬───┘          └────┬─────┘          └────┬─────┘   └────┬────┘   └───┬────┘
+   │                   │                     │              │            │
+   │ 1. Select position│                     │              │            │
+   │    Select token   │                     │              │            │
+   │    Enter recipient│                     │              │            │
+   │ ─────────────────>│                     │              │            │
+   │                   │                     │              │            │
+   │                   │ 2. GET /swap/quote  │              │            │
+   │                   │ ───────────────────>│──────────────>            │
+   │                   │                     │              │            │
+   │                   │ 3. { rate, output } │              │            │
+   │ 4. Review quote   │ <──────────────────────────────────│            │
+   │ <─────────────────│                     │              │            │
+   │                   │                     │              │            │
+   │ 5. Confirm swap   │                     │              │            │
+   │ ─────────────────>│                     │              │            │
+   │                   │                     │              │            │
+   │                   │ 6. POST /swap/execute               │            │
+   │                   │ ───────────────────>│              │            │
+   │                   │                     │              │            │
+   │                   │   ... poll ...      │ [Gen proof]  │            │
+   │                   │                     │              │            │
+   │                   │                     │ 7. Relayer   │            │
+   │                   │                     │  unshields   │            │
+   │                   │                     │ ─────────────────────────>│
+   │                   │                     │              │            │
+   │                   │                     │ 8. Relayer swaps         │
+   │                   │                     │    SOL → token│           │
+   │                   │                     │ ─────────────>│           │
+   │                   │                     │              │            │
+   │                   │                     │ 9. Relayer sends         │
+   │                   │                     │    token to recipient    │
+   │                   │                     │ ─────────────────────────>│
+   │                   │                     │              │            │
+   │                   │ 10. { completed,    │              │            │
+   │                   │     txSignatures }  │              │            │
+   │                   │ <───────────────────│              │            │
+   │                   │                     │              │            │
+   │ 11. Success!      │                     │              │            │
+   │ <─────────────────│                     │              │            │
+
+Total time: ~30-60 seconds
+- Step 2-3: ~500ms (Jupiter quote)
+- Step 6-7: ~10-30s (proof generation + unshield)
+- Step 8: ~5-10s (Jupiter swap execution)
+- Step 9: ~2-5s (token transfer confirmation)
+```
+
 ---
 
 ## 8. Deployment Architecture
@@ -922,32 +1227,31 @@ Total time: ~20-45 seconds
                     │  │  - Static assets via Edge CDN           │ │
                     │  │  - SSR for initial page load            │ │
                     │  │  - Client-side routing                  │ │
-                    │  └─────────────────────────────────────────┘ │
-                    └─────────────────────┬───────────────────────┘
-                                          │
-                              HTTPS (api.whalevault.app)
-                                          │
-                    ┌─────────────────────▼───────────────────────┐
-                    │              RAILWAY / RENDER                │
-                    │  ┌─────────────────────────────────────────┐ │
-                    │  │         FastAPI Backend                 │ │
-                    │  │  - uvicorn with 2 workers               │ │
-                    │  │  - Veil SDK (Python + Rust FFI)         │ │
-                    │  │  - In-memory job queue (for MVP)        │ │
-                    │  └──────────────────┬──────────────────────┘ │
-                    └─────────────────────┼───────────────────────┘
-                                          │
-                               HTTPS (Solana JSON-RPC)
-                                          │
-                    ┌─────────────────────▼───────────────────────┐
-                    │            SOLANA DEVNET                     │
-                    │  ┌─────────────────────────────────────────┐ │
-                    │  │  Program: A24NnD...AEy (307KB)          │ │
-                    │  │  Pool PDA: derived from seed            │ │
-                    │  │  Vault PDA: holds SOL                   │ │
-                    │  │  Nullifier PDAs: track spent            │ │
-                    │  └─────────────────────────────────────────┘ │
-                    └─────────────────────────────────────────────┘
+                    │  │  - Client-side AES-256-GCM encryption   │ │
+                    │  └──────────┬──────────────────┬───────────┘ │
+                    └─────────────┼──────────────────┼────────────┘
+                                  │                  │
+                    HTTPS (API)   │                  │  HTTPS (Supabase)
+                                  │                  │
+         ┌────────────────────────▼──┐    ┌──────────▼──────────────┐
+         │      RAILWAY / RENDER      │    │        SUPABASE          │
+         │  ┌──────────────────────┐  │    │  ┌──────────────────┐   │
+         │  │    FastAPI Backend   │  │    │  │   vault_data     │   │
+         │  │  - Veil SDK (proofs) │  │    │  │  (encrypted blob │   │
+         │  │  - Relayer service   │──┼──┐ │  │   + wallet hash) │   │
+         │  │  - Jupiter swap exec │  │  │ │  └──────────────────┘   │
+         │  └──────────────────────┘  │  │ │  Frontend-only access.  │
+         └────────────┬───────────────┘  │ │  Backend never touches. │
+                      │                  │ └─────────────────────────┘
+           ┌──────────┴──────────┐       │
+           │                     │       │
+           ▼                     ▼       ▼
+    ┌─────────────┐       ┌──────────────────┐
+    │SOLANA DEVNET│       │   JUPITER API    │
+    │  Multi-Pool │       │  (token swaps)   │
+    │  PDAs (1,10,│       └──────────────────┘
+    │  100,1K SOL)│
+    └─────────────┘
 ```
 
 ### 8.2 Environment Variables
@@ -962,6 +1266,10 @@ NEXT_PUBLIC_API_URL_DEV=http://localhost:8000/v1
 NEXT_PUBLIC_SOLANA_NETWORK=devnet
 NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
 NEXT_PUBLIC_PROGRAM_ID=A24NnDgenymQHS8FsNX7gnGgj8gfW7EWLyoxfsjHrAEy
+
+# Supabase (V3)
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 
 # Feature flags
 NEXT_PUBLIC_ENABLE_ANALYTICS=false
@@ -978,6 +1286,12 @@ DEBUG=false
 # Solana
 SOLANA_RPC_URL=https://api.devnet.solana.com
 PROGRAM_ID=A24NnDgenymQHS8FsNX7gnGgj8gfW7EWLyoxfsjHrAEy
+
+# Relayer (V2)
+RELAYER_KEYPAIR=<base58 encoded keypair>
+
+# Jupiter (V3)
+JUPITER_API_URL=https://quote-api.jup.ag/v6
 
 # Pool authority (for pool initialization only - remove after init)
 # POOL_AUTHORITY_KEYPAIR=<base58 encoded keypair>
@@ -1055,10 +1369,12 @@ frontend/
 │   ├── dashboard/
 │   │   └── page.tsx            # Main dashboard after connect
 │   ├── shield/
-│   │   └── page.tsx            # Shield flow
+│   │   └── page.tsx            # Shield flow (+ USDC "Coming Soon")
 │   ├── unshield/
-│   │   └── page.tsx            # Unshield flow
-│   └── history/
+│   │   └── page.tsx            # Stealth Withdraw (renamed V3)
+│   ├── private-swap/           # V3
+│   │   └── page.tsx            # Private Swap flow
+│   └── history/                # V3
 │       └── page.tsx            # Transaction history
 │
 ├── components/
@@ -1073,13 +1389,14 @@ frontend/
 │   │   └── WalletModal.tsx     # Wallet selection modal
 │   │
 │   ├── dashboard/
-│   │   ├── PoolStats.tsx       # TVL, deposits, anonymity set
+│   │   ├── PoolStats.tsx       # TVL per denomination, anonymity sets
 │   │   ├── PositionsList.tsx   # User's shielded positions
-│   │   ├── PositionCard.tsx    # Single position display
+│   │   ├── PositionCard.tsx    # Single position (w/ delay countdown)
 │   │   └── ActivityFeed.tsx    # Recent pool activity
 │   │
 │   ├── shield/
 │   │   ├── ShieldForm.tsx      # Amount input + balance
+│   │   ├── DenominationSelector.tsx # V2: denomination picker
 │   │   ├── AmountInput.tsx     # SOL amount with max button
 │   │   └── ShieldConfirm.tsx   # Review + sign modal
 │   │
@@ -1087,7 +1404,16 @@ frontend/
 │   │   ├── UnshieldForm.tsx    # Position + recipient form
 │   │   ├── PositionSelector.tsx# Select position dropdown
 │   │   ├── RecipientInput.tsx  # Address input with validation
+│   │   ├── PrivacyDelay.tsx    # V3: opt-in delay toggle (1h/6h/24h)
 │   │   └── UnshieldConfirm.tsx # Review + sign modal
+│   │
+│   ├── swap/                   # V3
+│   │   ├── TokenSelector.tsx   # Searchable token dropdown
+│   │   └── SwapQuote.tsx       # Rate, output, slippage display
+│   │
+│   ├── history/                # V3
+│   │   ├── TransactionList.tsx # Filtered transaction list
+│   │   └── TransactionCard.tsx # Single transaction entry
 │   │
 │   ├── proof/
 │   │   ├── ProofProgress.tsx   # Progress bar + stage text
@@ -1108,30 +1434,35 @@ frontend/
 │
 ├── hooks/
 │   ├── useShield.ts            # Shield flow logic
-│   ├── useUnshield.ts          # Unshield flow logic
+│   ├── useUnshield.ts          # Unshield flow logic (+ delay check)
+│   ├── usePrivateSwap.ts       # V3: Private Swap flow
+│   ├── useVaultStorage.ts      # V3: Supabase encrypted storage
 │   ├── useProofStatus.ts       # Proof polling
-│   ├── usePool.ts              # Pool stats fetching
-│   ├── usePositions.ts         # Position management
+│   ├── usePools.ts             # V2: multi-pool stats
 │   └── useWallet.ts            # Wallet state wrapper
 │
 ├── stores/
 │   ├── wallet.ts               # Zustand wallet store
 │   ├── shield.ts               # Zustand shield store
 │   ├── unshield.ts             # Zustand unshield store
-│   ├── positions.ts            # Zustand positions store
-│   └── pool.ts                 # Zustand pool store
+│   ├── vaultStorage.ts         # V3: Zustand vault storage (Supabase)
+│   ├── privateSwap.ts          # V3: Zustand swap store
+│   └── pool.ts                 # Zustand pool store (multi-pool)
 │
 ├── lib/
 │   ├── api.ts                  # API client with error handling
 │   ├── solana.ts               # Solana utilities (PDA derivation)
+│   ├── supabase.ts             # V3: Supabase client init
+│   ├── encryption.ts           # V3: AES-256-GCM encrypt/decrypt
+│   ├── tokens.ts               # V3: Featured tokens + Jupiter API
+│   ├── receipt.ts              # V3: Deposit receipt export/import
 │   ├── errors.ts               # Error mapping
-│   ├── storage.ts              # LocalStorage with encryption
 │   ├── utils.ts                # General utilities
-│   └── constants.ts            # Program ID, seeds, etc.
+│   └── constants.ts            # Program ID, seeds, denominations
 │
 ├── types/
 │   ├── api.ts                  # API request/response types
-│   ├── position.ts             # Position types
+│   ├── position.ts             # Position types (V3 updated)
 │   └── pool.ts                 # Pool types
 │
 ├── public/
@@ -1157,8 +1488,10 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── shield.py           # POST /api/shield/prepare
 │   │   ├── unshield.py         # POST /api/unshield/proof
+│   │   ├── relay.py            # V2: POST /api/relay/unshield, GET /api/relay/info
+│   │   ├── swap.py             # V3: GET /api/swap/quote, POST /api/swap/execute
 │   │   ├── proof.py            # GET /api/proof/status/{id}
-│   │   ├── pool.py             # GET /api/pool/status
+│   │   ├── pool.py             # GET /api/pool/status, /api/pool/status/{denomination}
 │   │   └── health.py           # GET /api/health
 │   │
 │   └── middleware/
@@ -1168,15 +1501,17 @@ backend/
 │
 ├── models/
 │   ├── __init__.py
-│   ├── requests.py             # Pydantic request models
-│   ├── responses.py            # Pydantic response models
+│   ├── requests.py             # Pydantic request models (+ relay, swap)
+│   ├── responses.py            # Pydantic response models (+ relay, swap)
 │   └── errors.py               # Error codes and messages
 │
 ├── services/
 │   ├── __init__.py
 │   ├── veil_service.py         # Veil SDK wrapper
 │   ├── proof_service.py        # Proof generation management
-│   ├── pool_service.py         # Pool state fetching
+│   ├── relay_service.py        # V2: Relayer tx submission
+│   ├── jupiter_service.py      # V3: Jupiter API quote + swap
+│   ├── pool_service.py         # Pool state fetching (multi-pool)
 │   └── solana_service.py       # Solana RPC client
 │
 ├── workers/
@@ -1188,7 +1523,7 @@ backend/
 │   ├── validation.py           # Input validation helpers
 │   └── encoding.py             # Hex/base58 conversion
 │
-├── config.py                   # Settings from environment
+├── config.py                   # Settings from environment (+ Jupiter, relayer)
 ├── requirements.txt
 ├── Dockerfile
 └── .env.example
@@ -1200,14 +1535,20 @@ backend/
 |------|----------------|
 | `frontend/app/layout.tsx` | Root layout with WalletProvider, Toaster, error boundary |
 | `frontend/components/wallet/WalletProvider.tsx` | Solana wallet adapter configuration |
-| `frontend/stores/positions.ts` | Position CRUD with localStorage persistence |
-| `frontend/hooks/useProofStatus.ts` | Proof polling with timeout and error handling |
+| `frontend/stores/vaultStorage.ts` | V3: Position CRUD with Supabase encrypted persistence |
+| `frontend/hooks/useVaultStorage.ts` | V3: Encrypt/decrypt positions, sync to Supabase |
+| `frontend/hooks/usePrivateSwap.ts` | V3: Private Swap flow (quote → execute → poll) |
+| `frontend/lib/encryption.ts` | V3: AES-256-GCM encrypt/decrypt, wallet-derived key |
+| `frontend/lib/supabase.ts` | V3: Supabase client initialization |
+| `frontend/lib/tokens.ts` | V3: Featured token list + Jupiter token API |
 | `frontend/lib/api.ts` | Typed API client with automatic error parsing |
 | `backend/main.py` | FastAPI app with CORS, routes, middleware |
 | `backend/services/veil_service.py` | Wraps Veil SDK for commitment/proof generation |
+| `backend/services/relay_service.py` | V2: Relayer keypair management + tx submission |
+| `backend/services/jupiter_service.py` | V3: Jupiter API quote fetching + swap execution |
 | `backend/workers/proof_worker.py` | Async proof generation with progress updates |
-| `backend/api/routes/unshield.py` | Creates proof jobs, returns job ID |
-| `backend/api/routes/proof.py` | Returns proof status and results |
+| `backend/api/routes/relay.py` | V2: Relayer unshield + info endpoints |
+| `backend/api/routes/swap.py` | V3: Swap quote + execute endpoints |
 
 ---
 
@@ -1283,33 +1624,25 @@ backend/
 
 ## 12. Open Questions
 
-### High Priority (Must Answer Before Implementation)
+### Resolved (V2/V3)
 
-1. **Secret Storage**: Should we encrypt position secrets in localStorage? What key derivation method?
-   - Recommendation: Use wallet signature as encryption key seed
+1. **Secret Storage**: ✅ **RESOLVED** — AES-256-GCM encryption with wallet-signature-derived key. Encrypted blob stored in Supabase. Key = SHA-256(wallet signature of "WhaleVault-v1"). Wallet hash = SHA-256(pubkey) for lookup.
 
-2. **Proof Job Expiry**: How long do we keep completed proof jobs in memory?
-   - Recommendation: 5 minutes, then require re-generation
+2. **Proof Job Expiry**: 5 minutes in memory, then require re-generation.
 
-3. **Position Sync**: Should positions sync across devices/browsers?
-   - Recommendation: No for MVP, localStorage only with export/import option
+3. **Position Sync**: ✅ **RESOLVED** — Yes, via Supabase encrypted cloud backup. Positions auto-sync on shield/unshield. Disconnect and reconnect on any device → positions restored.
 
-### Medium Priority (Can Decide During Implementation)
+4. **Pool Stats Caching**: 30-second cache, refresh on shield/unshield.
 
-4. **Pool Stats Caching**: How fresh must pool stats be?
-   - Recommendation: 30-second cache, refresh on shield/unshield
+5. **Transaction History**: ✅ **RESOLVED** — Supabase encrypted blob (positions array with full metadata). History page reads from same source. Solscan links via tx signatures.
 
-5. **Transaction History**: On-chain query vs localStorage?
-   - Recommendation: localStorage for MVP, with tx signature for verification
+6. **Error Retry Strategy**: 3 retries with exponential backoff (1s, 2s, 4s).
 
-6. **Error Retry Strategy**: Automatic retry on RPC errors?
-   - Recommendation: 3 retries with exponential backoff (1s, 2s, 4s)
-
-### Low Priority (Polish Phase)
+### Still Open (Low Priority / Polish Phase)
 
 7. **Analytics**: Track proof generation times for optimization?
 8. **Sound Effects**: Include on success/error?
-9. **Dark/Light Mode**: Support theme toggle?
+9. **Dark/Light Mode**: Dark mode is default. Light mode toggle deferred.
 
 ---
 
@@ -1319,10 +1652,12 @@ backend/
 // Constants
 const PROGRAM_ID = "A24NnDgenymQHS8FsNX7gnGgj8gfW7EWLyoxfsjHrAEy";
 
-// PDA Derivations (using @solana/web3.js)
-function getPoolPDA(programId: PublicKey): [PublicKey, number] {
+// PDA Derivations (using @solana/web3.js) — V2: multi-pool
+function getPoolPDA(programId: PublicKey, denomination: bigint): [PublicKey, number] {
+  const denomBytes = Buffer.alloc(8);
+  denomBytes.writeBigUInt64LE(denomination);
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("privacy_pool")],
+    [Buffer.from("privacy_pool"), denomBytes],
     programId
   );
 }
@@ -1365,4 +1700,5 @@ const DISCRIMINATORS = {
 ---
 
 *Document generated: January 25, 2026*
-*Ready for implementation review*
+*Updated for V2 (multi-pool, relayer) + V3 (Supabase, Private Swap, Stealth Withdraw): January 27, 2026*
+*Ready for implementation*

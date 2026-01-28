@@ -11,6 +11,7 @@ import { useShield } from "@/hooks/useShield";
 import { usePools } from "@/hooks/usePools";
 import { useConfetti } from "@/hooks/useConfetti";
 import { DenominationSelector } from "@/components/shield/DenominationSelector";
+import { PrivacyDelay } from "@/components/shield/PrivacyDelay";
 import { PrivacyWarning } from "@/components/shield/PrivacyWarning";
 import { formatAmount } from "@/lib/utils";
 import { SUPPORTED_TOKENS, LAMPORTS_PER_SOL, type SupportedToken } from "@/lib/constants";
@@ -26,6 +27,7 @@ export default function ShieldPage() {
   const [mode, setMode] = useState<"fixed" | "custom">("fixed");
   const [denomination, setDenomination] = useState<number | null>(1_000_000_000);
   const [customAmount, setCustomAmount] = useState("");
+  const [delayMs, setDelayMs] = useState<number | null>(null);
 
   const isLoading = status === "preparing" || status === "signing" || status === "confirming" || status === "deriving";
 
@@ -71,7 +73,7 @@ export default function ShieldPage() {
       ? denomination
       : Math.floor(effectiveAmount * LAMPORTS_PER_SOL);
 
-    await shield(lamports, mode === "fixed" ? denomination : null);
+    await shield(lamports, mode === "fixed" ? denomination : null, delayMs);
   };
 
   const getButtonText = () => {
@@ -169,6 +171,23 @@ export default function ShieldPage() {
                   </div>
                 </button>
               ))}
+
+              {/* USDC — Coming Soon */}
+              <div
+                className="relative flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/5 opacity-50 cursor-not-allowed pointer-events-none select-none"
+                title="USDC shielding coming in a future update"
+              >
+                <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-whale-500/20 text-whale-400 border border-whale-500/30">
+                  Coming Soon
+                </span>
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">U</span>
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-white">USDC</div>
+                  <div className="text-sm text-gray-400">USD Coin</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -183,17 +202,13 @@ export default function ShieldPage() {
             pools={pools}
           />
 
+          {/* Privacy Delay */}
+          <PrivacyDelay delayMs={delayMs} onDelayChange={setDelayMs} />
+
           {/* Custom Amount Input (only in custom mode) */}
           {mode === "custom" && (
             <>
-              <PrivacyWarning
-                isCustom
-                onSwitchToFixed={() => {
-                  setMode("fixed");
-                  setDenomination(1_000_000_000);
-                  setCustomAmount("");
-                }}
-              />
+              <PrivacyWarning isCustom />
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-gray-400">Amount</label>

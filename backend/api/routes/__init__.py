@@ -7,6 +7,7 @@ from .pool import router as pool_router
 from .health import router as health_router
 from .relay import router as relay_router
 from .commitment import router as commitment_router
+from .swap import router as swap_router
 
 
 api_router = APIRouter()
@@ -18,5 +19,6 @@ api_router.include_router(pool_router, prefix="/pool", tags=["pool"])
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(relay_router, prefix="/relay", tags=["relay"])
 api_router.include_router(commitment_router, prefix="/commitment", tags=["commitment"])
+api_router.include_router(swap_router, prefix="/swap", tags=["swap"])
 
 __all__ = ["api_router"]

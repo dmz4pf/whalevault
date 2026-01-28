@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -21,12 +21,18 @@ function getDenominationLabel(denomination?: number | null): string {
   return denom ? `${denom.label} Pool` : "Custom";
 }
 
-const STORAGE_KEY = "whalevault_positions";
+function formatTimeRemaining(delayUntil: string): string | null {
+  const remaining = new Date(delayUntil).getTime() - Date.now();
+  if (remaining <= 0) return null;
+  const hours = Math.floor(remaining / (60 * 60 * 1000));
+  const minutes = Math.ceil((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
 
 export default function UnshieldPage() {
   const router = useRouter();
   const { connected, publicKey } = useWallet();
-  const { positions: storePositions, setPositions } = usePositionsStore();
+  const { positions: storePositions } = usePositionsStore();
   const { status, error, proofProgress, proofStage, fee, unshield, reset } =
     useUnshield();
   const { fire: fireConfetti } = useConfetti();
@@ -36,15 +42,13 @@ export default function UnshieldPage() {
   );
   const [recipientAddress, setRecipientAddress] = useState<string>("");
   const [useCustomRecipient, setUseCustomRecipient] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  // Load positions from localStorage on mount
+  // Tick every minute to update delay countdowns
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const positions: Position[] = JSON.parse(stored);
-      setPositions(positions);
-    }
-  }, [setPositions]);
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter to only shielded positions
   const shieldedPositions = storePositions.filter(
@@ -62,12 +66,12 @@ export default function UnshieldPage() {
   useEffect(() => {
     if (status === "success") {
       fireConfetti();
-      toast.success("Assets unshielded successfully!");
+      toast.success("Stealth withdrawal complete!");
       setSelectedPosition(null);
       reset();
       setTimeout(() => router.push("/dashboard"), 1500);
     } else if (status === "error" && error) {
-      toast.error("Failed to unshield assets", { description: error });
+      toast.error("Stealth withdrawal failed", { description: error });
     }
   }, [status, error, reset, router, fireConfetti]);
 
@@ -95,7 +99,7 @@ export default function UnshieldPage() {
       case "confirming":
         return "Confirming on chain...";
       default:
-        return "Unshield Assets";
+        return "Stealth Withdraw";
     }
   };
 
@@ -129,7 +133,7 @@ export default function UnshieldPage() {
             Connect Your Wallet
           </h1>
           <p className="text-gray-400 mb-6">
-            Connect your wallet to unshield your assets
+            Connect your wallet to stealth withdraw your assets
           </p>
         </motion.div>
       </div>
@@ -142,7 +146,7 @@ export default function UnshieldPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2">Unshield Assets</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Stealth Withdraw</h1>
         <p className="text-gray-400">
           Convert your shielded positions back to regular, public tokens.
         </p>
@@ -171,7 +175,7 @@ export default function UnshieldPage() {
                 No Shielded Positions
               </h3>
               <p className="text-gray-400 mb-6 max-w-sm">
-                You don&apos;t have any shielded positions to unshield. Shield
+                You don&apos;t have any shielded positions to withdraw. Shield
                 some assets first to use this feature.
               </p>
               <Link href="/shield">
@@ -183,7 +187,7 @@ export default function UnshieldPage() {
       ) : (
         <Card gradient>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-white">Unshield</h2>
+            <h2 className="text-xl font-semibold text-white">Stealth Withdraw</h2>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Position Selection */}
@@ -222,6 +226,17 @@ export default function UnshieldPage() {
                           Shielded{" "}
                           {new Date(position.timestamp).toLocaleDateString()}
                         </div>
+                        {position.delayUntil && (() => {
+                          const timeLeft = formatTimeRemaining(position.delayUntil);
+                          return timeLeft ? (
+                            <div className="flex items-center gap-1 mt-1">
+                              <svg className="w-3 h-3 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xs text-yellow-400">Available in {timeLeft}</span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                     <div className="text-right">
@@ -239,7 +254,7 @@ export default function UnshieldPage() {
               <div className="p-4 rounded-xl bg-whale-500/5 border border-whale-500/20">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400">
-                    Amount to unshield
+                    Amount to withdraw
                   </span>
                   <span className="text-lg font-semibold text-white">
                     {formatSOL(selectedPosition.shieldedAmount)}{" "}
