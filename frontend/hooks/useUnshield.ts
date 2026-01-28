@@ -11,6 +11,7 @@ import { getPositionSecret } from "@/lib/secret-derivation";
 import { pollWithBackoff } from "@/lib/polling";
 import type { Position, Transaction } from "@/types";
 import type { ProofResult, ProofStatusResponse } from "@/types/api";
+import { PROOF_POLLING_CONFIG } from "@/lib/constants";
 
 export type UnshieldStatus =
   | "idle"
@@ -35,8 +36,6 @@ export interface UseUnshieldReturn extends UnshieldState {
   unshield: (position: Position, recipientAddress?: string) => Promise<void>;
   reset: () => void;
 }
-
-const STORAGE_KEY = "whalevault_positions";
 
 export function useUnshield(): UseUnshieldReturn {
   const wallet = useWallet();
@@ -89,12 +88,7 @@ export function useUnshield(): UseUnshieldReturn {
         },
         (response) =>
           response.status === "completed" || response.status === "failed",
-        {
-          initialDelayMs: 500,
-          maxDelayMs: 5000,
-          maxAttempts: 120, // ~2-3 minutes max with backoff
-          backoffMultiplier: 1.3,
-        }
+        PROOF_POLLING_CONFIG
       );
 
       if (result.status === "failed") {
@@ -126,6 +120,19 @@ export function useUnshield(): UseUnshieldReturn {
           ...prev,
           status: "error",
           error: "Position missing commitment",
+        }));
+        return;
+      }
+
+      if (position.delayUntil && new Date(position.delayUntil) > new Date()) {
+        const remaining = new Date(position.delayUntil).getTime() - Date.now();
+        const hours = Math.floor(remaining / (60 * 60 * 1000));
+        const minutes = Math.ceil((remaining % (60 * 60 * 1000)) / (60 * 1000));
+        const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        setState((prev) => ({
+          ...prev,
+          status: "error",
+          error: `This position has a privacy delay. Available in ${timeStr}.`,
         }));
         return;
       }
@@ -209,15 +216,6 @@ export function useUnshield(): UseUnshieldReturn {
         // Step 5: Update position and storage
         updatePosition(position.id, { status: "unshielded" });
 
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const positions: Position[] = JSON.parse(stored);
-          const updated = positions.map((p) =>
-            p.id === position.id ? { ...p, status: "unshielded" as const } : p
-          );
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        }
-
         // Add transaction record
         const txRecord: Transaction = {
           id: relayResult.signature,
@@ -241,12 +239,12 @@ export function useUnshield(): UseUnshieldReturn {
       } catch (error) {
         if (abortRef.current) return;
 
-        const message = error instanceof Error ? error.message : "Unshield failed";
+        const message = error instanceof Error ? error.message : "Stealth withdrawal failed";
         console.error("[Unshield] Error:", error);
 
         // Provide user-friendly error messages
         const userMessage = message.includes("Signature required")
-          ? "Please sign the message to unshield your position. The signature is used to securely derive your secret."
+          ? "Please sign the message to withdraw your position. The signature is used to securely derive your secret."
           : message.includes("User rejected")
           ? "Signature request was rejected. Please try again."
           : message.includes("Relayer")

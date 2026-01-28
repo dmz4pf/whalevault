@@ -14,7 +14,15 @@ import Link from "next/link";
 import type { PoolStatusResponse } from "@/types/api";
 import { SkeletonCard, SkeletonPosition } from "@/components/ui/Skeleton";
 
-const STORAGE_KEY = "whalevault_positions";
+function formatRelativeTime(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(iso).toLocaleDateString();
+}
 
 function getPrivacyLevel(depositCount: number) {
   if (depositCount >= 20) return { color: "text-green-400", bg: "bg-green-400", label: "Good privacy" };
@@ -30,22 +38,10 @@ function getDenominationLabel(denomination?: number | null): string {
 
 export default function DashboardPage() {
   const { connected, balance } = useWallet();
-  const { positions, setPositions } = usePositionsStore();
+  const { positions, syncing, lastSynced, walletHash } = usePositionsStore();
   const { pools, loading: poolsLoading } = usePools();
   const [poolStatus, setPoolStatus] = useState<PoolStatusResponse | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Load positions from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setPositions(JSON.parse(stored));
-      } catch {
-        // Invalid JSON, ignore
-      }
-    }
-  }, [setPositions]);
 
   // Fetch pool status
   const fetchPoolStatus = useCallback(async () => {
@@ -120,6 +116,30 @@ export default function DashboardPage() {
         <p className="text-gray-400">
           Manage your shielded positions and view your privacy-protected assets.
         </p>
+        {syncing ? (
+          <div className="flex items-center gap-1.5 text-xs text-whale-400 mt-3">
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Syncing...</span>
+          </div>
+        ) : walletHash && lastSynced ? (
+          <div className="flex items-center gap-1.5 text-xs text-green-400 mt-3">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            </svg>
+            <span>Backed up · {formatRelativeTime(lastSynced)}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-3">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364L5.636 5.636" />
+            </svg>
+            <span>Local only</span>
+          </div>
+        )}
       </motion.div>
 
       {/* Overview Cards */}
@@ -297,7 +317,7 @@ export default function DashboardPage() {
             <Button variant="primary">Shield Assets</Button>
           </Link>
           <Link href="/unshield">
-            <Button variant="secondary">Unshield Assets</Button>
+            <Button variant="secondary">Stealth Withdraw</Button>
           </Link>
           <Link href="/history">
             <Button variant="outline">View History</Button>

@@ -1,8 +1,8 @@
 # WhaleVault PRD
 ## Privacy-First Treasury Migration Tool for Solana
 
-**Version:** 1.0
-**Date:** January 25, 2026
+**Version:** 3.0
+**Date:** January 27, 2026 (updated from v1.0 Jan 25)
 **Target:** Solana Privacy Hackathon 2026 ($20,000-$24,500 prize)
 
 ---
@@ -19,19 +19,22 @@ Large Solana wallet holders ("whales") face a critical privacy problem: moving s
 Current solutions either don't exist on Solana or require complex multi-step processes that whales avoid.
 
 ### The Solution
-**WhaleVault** is a privacy-first treasury migration tool that enables large holders to shield, transfer, and unshield SOL using zero-knowledge proofs. Built on the Veil SDK, it provides:
-- One-click privacy deposits (shield)
-- Confidential transfers within the privacy pool
-- Anonymous withdrawals to new addresses (unshield)
+**WhaleVault** is a privacy-first treasury migration tool that enables large holders to shield, withdraw, and swap assets using zero-knowledge proofs on Solana. Built on the Veil SDK, it provides:
+- One-click privacy deposits into fixed-denomination pools (shield)
+- Anonymous withdrawals to new addresses via relayer (stealth withdraw)
+- **Private swaps** — withdraw shielded SOL as any token to any wallet (via Jupiter)
+- Encrypted cloud backup of positions via Supabase (zero-knowledge to the server)
 - Real-time ZK proof generation with visual feedback
+- Opt-in privacy delays to reduce timing correlation
 
 ### Success Metric
 A working demo where a user can:
 1. Connect wallet
-2. Shield 1 SOL into privacy pool
+2. Shield 1 SOL into a denomination pool
 3. Wait for proof generation (with animated feedback)
-4. Unshield to a different address
-5. Verify the link is broken on-chain
+4. Stealth withdraw to a different address — OR private swap to USDC at a different address
+5. Verify the link is broken on-chain (different wallet AND optionally different token)
+6. Disconnect, reconnect — positions restored from encrypted cloud backup
 
 ---
 
@@ -40,49 +43,57 @@ A working demo where a user can:
 ### 2.1 Core User Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      WhaleVault Flow                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. CONNECT          2. SHIELD           3. UNSHIELD        │
-│  ┌─────────┐        ┌─────────┐         ┌─────────┐        │
-│  │ Phantom │───────▶│ Deposit │────────▶│Withdraw │        │
-│  │ Wallet  │        │   SOL   │         │  SOL    │        │
-│  └─────────┘        └────┬────┘         └────┬────┘        │
-│                          │                    │             │
-│                          ▼                    ▼             │
-│                    ┌──────────┐         ┌──────────┐       │
-│                    │ Generate │         │ Generate │       │
-│                    │   Proof  │         │   Proof  │       │
-│                    └────┬─────┘         └────┬─────┘       │
-│                         │                    │              │
-│                         ▼                    ▼              │
-│                    ┌──────────┐         ┌──────────┐       │
-│                    │Commitment│         │ Nullify  │       │
-│                    │ On-Chain │         │ On-Chain │       │
-│                    └──────────┘         └──────────┘       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         WhaleVault Flow                               │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  1. CONNECT        2. SHIELD         3. STEALTH        4. PRIVATE    │
+│                                         WITHDRAW          SWAP       │
+│  ┌─────────┐      ┌─────────┐       ┌──────────┐     ┌──────────┐   │
+│  │ Wallet  │─────▶│ Deposit │──┬───▶│ Withdraw │     │ Withdraw │   │
+│  │ + Sign  │      │ SOL into│  │    │ SOL via  │     │ as any   │   │
+│  │ encrypt │      │  pool   │  │    │ relayer  │     │ token    │   │
+│  │ message │      └────┬────┘  │    └────┬─────┘     └────┬─────┘   │
+│  └────┬────┘           │       │         │                 │         │
+│       │                ▼       │         ▼                 ▼         │
+│       ▼          ┌──────────┐  │    ┌──────────┐     ┌──────────┐   │
+│  ┌──────────┐    │Commitment│  │    │ Relayer  │     │ Jupiter  │   │
+│  │ Supabase │    │ On-Chain │  │    │ submits  │     │ swap +   │   │
+│  │ encrypted│    └──────────┘  │    │ to chain │     │ send to  │   │
+│  │ backup   │                  │    └──────────┘     │recipient │   │
+│  └──────────┘                  │                     └──────────┘   │
+│                                │                                     │
+│                                └── Positions backed up to Supabase   │
+│                                    (encrypted, zero-knowledge)       │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Core Features (MVP)
+### 2.2 Core Features
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Shield SOL** | Deposit native SOL, receive commitment | P0 |
-| **Unshield SOL** | Withdraw with ZK proof to any address | P0 |
-| **Wallet Connect** | Phantom, Solflare, Backpack support | P0 |
-| **Proof Status** | Real-time generation progress | P0 |
-| **Transaction History** | View past shield/unshield ops | P1 |
-| **Privacy Calculator** | Estimate anonymity set size | P1 |
+| Feature | Description | Priority | Volume |
+|---------|-------------|----------|--------|
+| **Shield SOL** | Deposit SOL into fixed-denomination pools | P0 | V1 |
+| **Stealth Withdraw** | Withdraw SOL via relayer to any address | P0 | V1+V2 |
+| **Multi-Pool Denominations** | 1, 10, 100, 1000 SOL pools | P0 | V2 |
+| **Relayer** | User never signs withdraw tx — relayer submits | P0 | V2 |
+| **Wallet Connect** | Phantom, Solflare, Backpack support | P0 | V1 |
+| **Proof Status** | Real-time generation progress | P0 | V1 |
+| **Private Swap** | Withdraw shielded SOL as any token via Jupiter | P0 | V3 |
+| **Encrypted Cloud Backup** | Positions auto-synced to Supabase (AES-256-GCM) | P0 | V3 |
+| **Transaction History** | Full history page with filters, powered by Supabase | P1 | V3 |
+| **Privacy Delays** | Opt-in time delay (1h/6h/24h) to reduce timing correlation | P1 | V3 |
+| **Deposit Receipts** | Encrypted offline backup export/import | P1 | V3 |
+| **Pool Health Indicators** | Anonymity set quality per pool | P1 | V4 |
+| **UI Enhancement** | Premium visual polish, animations, glassmorphism | P1 | V3.1 |
 
-### 2.3 What We're NOT Building (MVP)
+### 2.3 What We're NOT Building
 
-- ❌ SPL token support (SOL only for MVP)
+- ❌ SPL token shielding (SOL-only deposits; USDC "Coming Soon" in UI)
 - ❌ Private transfers between users
-- ❌ Relayer network (user pays own gas)
 - ❌ Mobile native app
 - ❌ Multi-sig support
+- ❌ On-chain CPI swaps (using relayer-side Jupiter swap instead)
+- ❌ Cross-pool transfers
 
 ---
 
@@ -91,52 +102,52 @@ A working demo where a user can:
 ### 3.1 System Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                        FRONTEND                                 │
-│                    (Next.js 14 + TypeScript)                   │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Wallet     │  │   Shield     │  │  Unshield    │         │
-│  │   Connect    │  │    Flow      │  │    Flow      │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-│         │                 │                  │                  │
-│         └────────────────┼──────────────────┘                  │
-│                          │                                      │
-│                          ▼                                      │
-│              ┌───────────────────────┐                         │
-│              │   @solana/web3.js     │                         │
-│              │   @solana/wallet-adapter                        │
-│              └───────────┬───────────┘                         │
-└──────────────────────────┼─────────────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────────────┐
-│                        BACKEND                                  │
-│                    (FastAPI + Python)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   /shield    │  │  /unshield   │  │   /status    │         │
-│  │   endpoint   │  │   endpoint   │  │   endpoint   │         │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
-│         │                 │                  │                  │
-│         └────────────────┼──────────────────┘                  │
-│                          │                                      │
-│                          ▼                                      │
-│              ┌───────────────────────┐                         │
-│              │      Veil SDK         │                         │
-│              │  (Python + Rust FFI)  │                         │
-│              └───────────┬───────────┘                         │
-└──────────────────────────┼─────────────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────────────┐
-│                     SOLANA DEVNET                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Privacy    │  │   Merkle     │  │  Nullifier   │         │
-│  │    Pool      │  │    Tree      │  │   Registry   │         │
-│  │    PDA       │  │    State     │  │    PDAs      │         │
-│  └──────────────┘  └──────────────┘  └──────────────┘         │
-│                                                                 │
-│  Program ID: A24NnDgenymQHS8FsNX7gnGgj8gfW7EWLyoxfsjHrAEy     │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Next.js 14)                        │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │
+│  │   Shield   │ │  Stealth   │ │  Private   │ │  History   │       │
+│  │    Flow    │ │  Withdraw  │ │   Swap     │ │   Page     │       │
+│  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘       │
+│        │              │              │              │               │
+│        └──────────────┼──────────────┘              │               │
+│                       │                              │               │
+│                       ▼                              ▼               │
+│         ┌───────────────────────┐      ┌───────────────────────┐    │
+│         │  @solana/web3.js      │      │  Supabase Client      │    │
+│         │  @solana/wallet-adapter│      │  + AES-256-GCM        │    │
+│         └───────────┬───────────┘      │  encryption layer     │    │
+│                     │                  └───────────┬───────────┘    │
+└─────────────────────┼──────────────────────────────┼────────────────┘
+                      │                              │
+                      ▼                              ▼
+┌─────────────────────────────────────┐   ┌──────────────────────┐
+│           BACKEND (FastAPI)          │   │     SUPABASE         │
+│  ┌──────────┐ ┌──────────┐          │   │  ┌────────────────┐  │
+│  │ /shield  │ │  /relay   │          │   │  │  vault_data    │  │
+│  │ /unshield│ │  /swap    │          │   │  │  (encrypted)   │  │
+│  │ /pool    │ │  /health  │          │   │  └────────────────┘  │
+│  └────┬─────┘ └────┬─────┘          │   └──────────────────────┘
+│       │            │                 │
+│       ▼            ▼                 │
+│  ┌──────────┐ ┌──────────┐          │
+│  │ Veil SDK │ │ Relayer  │──────┐   │
+│  │ (proofs) │ │ Service  │      │   │
+│  └────┬─────┘ └──────────┘      │   │
+│       │                          │   │
+└───────┼──────────────────────────┼───┘
+        │                          │
+        ▼                          ▼
+┌───────────────────────┐  ┌──────────────────┐
+│     SOLANA DEVNET      │  │   JUPITER API    │
+│  ┌──────────────────┐  │  │  (token swaps)   │
+│  │ Multi-Pool PDAs  │  │  └──────────────────┘
+│  │ (1,10,100,1K SOL)│  │
+│  │ Vault PDAs       │  │
+│  │ Nullifier PDAs   │  │
+│  └──────────────────┘  │
+│                         │
+│  Program: F3NLg...      │
+└─────────────────────────┘
 ```
 
 ### 3.2 Technology Stack
@@ -150,78 +161,101 @@ A working demo where a user can:
 | **ZK Layer** | Veil SDK | Python bindings to Rust crypto core |
 | **On-Chain** | Anchor 0.29 | Solana program framework |
 | **Crypto** | Groth16 + BN254 | ~7,000 constraints, ~200k CU |
+| **Storage** | Supabase (PostgreSQL) | Encrypted position backup, zero-knowledge to server |
+| **Encryption** | AES-256-GCM (Web Crypto API) | Client-side encryption of all position data |
+| **Swaps** | Jupiter Aggregator API | Token swaps for Private Swap feature |
+| **Relayer** | Backend-hosted keypair | Submits withdraw/swap txs on user's behalf |
 
 ### 3.3 Data Flow
 
 #### Shield (Deposit) Flow:
 ```
-User → Frontend → Backend.generate_commitment() → Veil SDK
-                                                      │
-User ← Frontend ← { commitment, proof } ←────────────┘
+User → Frontend → Backend.generate_commitment(amount, denomination) → Veil SDK
+                                                                         │
+User ← Frontend ← { commitment, secret, instruction } ←─────────────────┘
          │
-         ▼
-    Sign Transaction
+         ├── Sign Transaction → Solana: shield_sol(commitment, amount)
+         │                         → Pool receives SOL, commitment in Merkle tree
          │
-         ▼
-    Solana: shield_sol(commitment, amount)
-         │
-         ▼
-    Pool receives SOL, commitment added to Merkle tree
+         └── Encrypt position → Supabase: vault_data(wallet_hash, encrypted_blob)
 ```
 
-#### Unshield (Withdraw) Flow:
+#### Stealth Withdraw Flow:
 ```
-User → Frontend → Backend.generate_withdraw_proof(nullifier, recipient)
-                                                      │
-                         Veil SDK generates Groth16 proof
-                                                      │
-User ← Frontend ← { proof, nullifier } ←─────────────┘
+User → Frontend → Backend.generate_proof(commitment, secret, recipient)
+                                              │
+                    Veil SDK generates proof   │
+                                              │
+Frontend ← { proof, nullifier } ←─────────────┘
          │
-         ▼
-    Sign Transaction
+         └── POST /relay/unshield → Relayer signs & submits tx
+                                       → SOL sent to recipient
+                                       → Position marked spent in Supabase
+```
+
+#### Private Swap Flow:
+```
+User → Frontend → GET /swap/quote(amount, outputMint) → Jupiter API
+                                                            │
+Frontend ← { rate, outputAmount, slippage } ←───────────────┘
          │
-         ▼
-    Solana: unshield_sol(nullifier, amount, proof)
+         └── POST /swap/execute(commitment, secret, recipient, outputMint)
+                  │
+                  Backend: 1. Generate proof
+                           2. Relayer unshields SOL to relayer wallet
+                           3. Relayer swaps SOL → token via Jupiter
+                           4. Relayer sends token to recipient
+                  │
+Frontend ← { txSignatures, status } ←──────────────────────────────────┘
          │
-         ▼
-    On-chain verification, nullifier PDA created, SOL sent to recipient
+         └── Position marked spent in Supabase with swap metadata
 ```
 
 ### 3.4 API Endpoints
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `POST /api/shield/prepare` | POST | Generate commitment for deposit |
-| `POST /api/unshield/proof` | POST | Generate ZK proof for withdrawal |
-| `GET /api/pool/status` | GET | Get pool statistics |
-| `GET /api/proof/status/{id}` | GET | Check proof generation progress |
-| `GET /api/health` | GET | Backend health check |
+| Endpoint | Method | Purpose | Volume |
+|----------|--------|---------|--------|
+| `POST /api/shield/prepare` | POST | Generate commitment for deposit | V1 |
+| `POST /api/unshield/proof` | POST | Generate ZK proof for withdrawal | V1 |
+| `GET /api/pool/status` | GET | Get pool statistics | V1 |
+| `GET /api/pool/status/{denomination}` | GET | Get specific pool stats | V2 |
+| `GET /api/proof/status/{id}` | GET | Check proof generation progress | V1 |
+| `GET /api/relay/info` | GET | Relayer status and fee info | V2 |
+| `POST /api/relay/unshield` | POST | Submit withdrawal via relayer | V2 |
+| `GET /api/swap/quote` | GET | Get Jupiter swap quote | V3 |
+| `POST /api/swap/execute` | POST | Execute private swap via relayer | V3 |
+| `GET /api/health` | GET | Backend health check | V1 |
 
 ---
 
 ## 4. User Interface & UX
 
-### 4.1 Screen Flow (5 Screens)
+### 4.1 Screen Flow (6 Screens)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   1. CONNECT     2. DASHBOARD    3. SHIELD    4. UNSHIELD  │
-│   ┌───────┐      ┌───────────┐   ┌────────┐   ┌──────────┐ │
-│   │       │      │Pool Stats │   │ Amount │   │ Position │ │
-│   │ Hero  │─────▶│Positions  │──▶│Confirm │──▶│  Amount  │ │
-│   │Wallet │      │ Activity  │   │ZK Anim │   │ Confirm  │ │
-│   │       │      │           │   │Success │   │ ZK Anim  │ │
-│   └───────┘      └───────────┘   └────────┘   └──────────┘ │
-│                        │                                    │
-│                        ▼                                    │
-│                  5. HISTORY                                 │
-│                  ┌───────────┐                              │
-│                  │ Past Txs  │                              │
-│                  │  Export   │                              │
-│                  └───────────┘                              │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                                                                    │
+│  Nav: Dashboard | Shield | Stealth Withdraw | Private Swap | History
+│                                                                    │
+│  1. CONNECT      2. DASHBOARD     3. SHIELD                       │
+│  ┌───────┐       ┌───────────┐    ┌──────────────┐                │
+│  │ Hero  │──────▶│Pool Stats │───▶│ Token Select │                │
+│  │Wallet │       │Positions  │    │ Denomination │                │
+│  │+Sign  │       │ Activity  │    │ Amount+Sign  │                │
+│  └───────┘       └─────┬─────┘    └──────────────┘                │
+│                        │                                           │
+│           ┌────────────┼────────────┐                              │
+│           ▼            ▼            ▼                              │
+│  4. STEALTH       5. PRIVATE    6. HISTORY                        │
+│     WITHDRAW         SWAP                                         │
+│  ┌──────────┐    ┌──────────┐   ┌──────────────┐                  │
+│  │ Position │    │ Position │   │ Filter tabs  │                  │
+│  │Recipient │    │ Token    │   │ All txs      │                  │
+│  │ Delay?   │    │Recipient │   │ Export/Import│                  │
+│  │ Confirm  │    │ Quote    │   └──────────────┘                  │
+│  └──────────┘    │ Confirm  │                                     │
+│                  └──────────┘                                     │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.2 Screen Details
@@ -229,92 +263,107 @@ User ← Frontend ← { proof, nullifier } ←───────────�
 #### Screen 1: Connect (Landing)
 - Hero section with value proposition
 - Animated gradient background
-- "Connect Wallet" CTA button
+- "Connect Wallet" CTA — signs encryption message on connect
 - Supported wallets: Phantom, Solflare, Backpack
 
 #### Screen 2: Dashboard
-- **Pool Stats Card:** Total value locked, # of deposits, anonymity set size
-- **Your Positions:** List of shielded amounts with timestamps
-- **Live Activity Feed:** Recent pool deposits (anonymized, amounts only)
-- **Quick Actions:** Shield / Unshield buttons
+- **Pool Stats Card:** TVL per denomination, total deposits, anonymity sets
+- **Your Positions:** Shielded positions with amounts, timestamps, privacy delay countdown
+- **Quick Actions:** Shield / Stealth Withdraw / Private Swap buttons
 
 #### Screen 3: Shield Flow
-- Amount input with SOL balance display
-- Privacy tooltip (inline calculator)
-- Transaction preview (fees, estimated time)
-- Confirm button → ZK proof animation → Confetti success
+- Token selector (SOL active, USDC "Coming Soon" disabled)
+- Denomination selector (1, 10, 100, 1000 SOL) with privacy indicators
+- Custom amount option (reduced privacy warning)
+- Transaction preview → sign → confirmation
+- Position auto-saved to Supabase (encrypted)
 
-#### Screen 4: Unshield Flow
-- Select position to unshield
-- Amount input (partial or full)
-- Recipient address input
-- Confirm → ZK animation → Confetti success
+#### Screen 4: Stealth Withdraw
+- Select shielded position
+- Enter recipient address
+- Privacy delay toggle (opt-in): 1h / 6h / 24h presets
+- Recommendation nudge: "Delays make your withdrawal harder to trace"
+- If delayed: countdown timer, withdraw button disabled until expired
+- Confirm → proof generation → relayer submits → success
 
-#### Screen 5: History
-- Chronological list of all transactions
-- Filter by type (shield/unshield)
-- Export to CSV
+#### Screen 5: Private Swap
+- Select shielded position
+- Enter recipient address
+- Token selector (searchable dropdown, featured tokens pinned)
+- Jupiter quote display: exchange rate, output amount, slippage, price impact
+- Confirm → proof generation → relayer unshields → swaps → sends token
 
-### 4.3 UI Polish Features
+#### Screen 6: History
+- Filter tabs: All | Shield | Stealth Withdraw | Private Swap
+- Each entry: type, amount, status, timestamp, Solscan link
+- Private Swap entries: output token + amount
+- Export backup receipt button
+- Import backup button
+
+### 4.3 UI Polish Features (V3.1)
 
 | Feature | Implementation |
 |---------|----------------|
 | **Dark Mode** | Default, with subtle gradients |
-| **Animated Background** | Slow-moving gradient mesh |
+| **Glassmorphism** | Frosted glass card effects (V3.1) |
 | **ZK Proof Animation** | Particle system showing "proof generating" |
 | **Success Confetti** | Canvas-confetti on successful transactions |
 | **Toast Notifications** | Sonner for all status updates |
 | **Skeleton Loading** | Shimmer placeholders during data fetch |
-| **Mobile Responsive** | Full mobile support, bottom sheet modals |
-| **Sound Effects** | Subtle chimes on success/error (optional) |
+| **Mobile Responsive** | Full mobile support |
+| **Page Transitions** | Fade/slide between routes (V3.1) |
+| **Animated Counters** | Pool stats, countdown timers (V3.1) |
 
 ### 4.4 Component Architecture
 
 ```
-src/
+frontend/
 ├── components/
 │   ├── layout/
 │   │   ├── Header.tsx
-│   │   ├── Footer.tsx
 │   │   └── MobileNav.tsx
 │   ├── wallet/
-│   │   ├── ConnectButton.tsx
-│   │   └── WalletModal.tsx
+│   │   ├── WalletProvider.tsx
+│   │   └── ConnectButton.tsx
 │   ├── dashboard/
 │   │   ├── PoolStats.tsx
-│   │   ├── PositionsList.tsx
-│   │   └── ActivityFeed.tsx
+│   │   └── PositionCard.tsx
 │   ├── shield/
-│   │   ├── AmountInput.tsx
-│   │   ├── PrivacyTooltip.tsx
-│   │   └── ShieldConfirm.tsx
+│   │   ├── DenominationSelector.tsx
+│   │   └── PrivacyWarning.tsx
 │   ├── unshield/
 │   │   ├── PositionSelector.tsx
-│   │   ├── RecipientInput.tsx
-│   │   └── UnshieldConfirm.tsx
-│   ├── shared/
-│   │   ├── ProofAnimation.tsx
-│   │   ├── SuccessConfetti.tsx
-│   │   └── TransactionStatus.tsx
-│   └── ui/
-│       ├── Button.tsx
-│       ├── Card.tsx
-│       ├── Input.tsx
-│       └── Modal.tsx
+│   │   └── RecipientInput.tsx
+│   ├── swap/
+│   │   ├── TokenSelector.tsx
+│   │   └── SwapQuote.tsx
+│   ├── history/
+│   │   ├── TransactionList.tsx
+│   │   └── TransactionCard.tsx
+│   └── shared/
+│       ├── ProofAnimation.tsx
+│       └── SuccessConfetti.tsx
 ├── hooks/
 │   ├── useShield.ts
 │   ├── useUnshield.ts
-│   ├── usePool.ts
+│   ├── usePrivateSwap.ts
+│   ├── useVaultStorage.ts
+│   ├── usePools.ts
 │   └── useProofStatus.ts
 ├── lib/
 │   ├── api.ts
-│   ├── solana.ts
+│   ├── supabase.ts
+│   ├── encryption.ts
+│   ├── tokens.ts
+│   ├── receipt.ts
+│   ├── constants.ts
 │   └── utils.ts
 └── app/
     ├── page.tsx (landing)
     ├── dashboard/page.tsx
     ├── shield/page.tsx
-    ├── unshield/page.tsx
+    ├── unshield/page.tsx (Stealth Withdraw)
+    ├── private-swap/page.tsx
     └── history/page.tsx
 ```
 
@@ -342,17 +391,22 @@ src/
 
 ### 5.3 Frontend Security
 
-- **No secret storage** - all sensitive ops in backend/on-chain
-- **Wallet adapter** - standard Solana wallet security
-- **HTTPS only** - TLS for all API calls
-- **Input validation** - amount bounds, address format
+- **Client-side encryption** — all position data (including secrets) encrypted with AES-256-GCM before leaving the browser
+- **Wallet-derived encryption key** — key derived from wallet signature of fixed message; deterministic and recoverable
+- **Wallet hash for lookup** — SHA-256 of wallet pubkey stored in Supabase; not reversible to on-chain address
+- **Supabase sees nothing useful** — encrypted blob + hash + timestamp; no queryable position data
+- **Wallet adapter** — standard Solana wallet security
+- **HTTPS only** — TLS for all API calls
+- **Input validation** — amount bounds, address format, token mint validation
 
 ### 5.4 Backend Security
 
-- **No private keys** - backend never touches user keys
-- **Rate limiting** - prevent proof generation spam
-- **Input sanitization** - all user inputs validated
-- **Stateless** - no session storage
+- **No private keys** — backend never touches user wallet keys
+- **Relayer keypair** — backend holds relayer keypair for submitting txs on user's behalf
+- **Rate limiting** — prevent proof generation and swap spam
+- **Input sanitization** — all user inputs validated
+- **Stateless** — no session storage; relayer is only stateful component
+- **Jupiter API** — quotes validated server-side before swap execution
 
 ---
 
@@ -381,41 +435,42 @@ src/
 
 | Criterion | How We Excel |
 |-----------|--------------|
-| **Innovation** | First whale-focused privacy tool on Solana |
-| **Technical** | Real ZK proofs, not mock - verified on-chain |
-| **Usability** | Polished UI, clear feedback, one-click flows |
-| **Completeness** | Full shield/unshield cycle working |
+| **Innovation** | First whale-focused privacy tool on Solana with Private Swaps |
+| **Technical** | Real ZK proofs on-chain, encrypted cloud backup, Jupiter integration |
+| **Usability** | Polished UI, stealth withdraw, private swap, one-click flows |
+| **Completeness** | Full shield → withdraw/swap cycle, transaction history, backup/recovery |
+| **Privacy** | Double layer: different wallet + different token. Encrypted storage. Privacy delays. |
 
 ---
 
 ## 7. Development Timeline
 
-### Week 1: Foundation (Jan 12-18)
+### V1: Foundation (Jan 12-25) ✅
+- Veil SDK integration, program deployment
+- Shield + unshield flows (frontend → backend → on-chain)
+- Dashboard + positions view
 
-| Day | Task | Status |
-|-----|------|--------|
-| 1-2 | Veil SDK verification, program compilation | ✅ Done |
-| 3 | Deploy to devnet | ⏳ Need SOL |
-| 4-5 | FastAPI backend scaffold + endpoints | ⬜ |
-| 6-7 | Next.js frontend scaffold + wallet connect | ⬜ |
+### V2: Multi-Pool & Relayer (Jan 25-26) ✅
+- Fixed denomination pools (1, 10, 100, 1000 SOL)
+- Relayer-based withdrawals (user never signs unshield tx)
+- Denomination selector UI with privacy indicators
 
-### Week 2: Core Features (Jan 19-25)
+### V3: Private Swaps & Cloud Backup (Jan 27-29)
+- Supabase encrypted cloud backup
+- Private Swap page (Jupiter integration)
+- Stealth Withdraw (rename + privacy delays)
+- Transaction history page
+- Deposit receipt export/import
 
-| Day | Task |
-|-----|------|
-| 1-2 | Shield flow (frontend → backend → on-chain) |
-| 3-4 | Unshield flow complete |
-| 5 | Dashboard + positions view |
-| 6-7 | Polish: animations, error handling, loading states |
+### V3.1: UI Enhancement (Jan 29-30)
+- Visual design system polish
+- Animations and transitions
+- Mobile responsive pass
 
-### Week 3: Polish & Demo (Jan 26-30)
-
-| Day | Task |
-|-----|------|
-| 1-2 | End-to-end testing, bug fixes |
-| 3 | Demo video recording |
-| 4 | Documentation + README |
-| 5 | Submission |
+### V4: Pool Seeding (Post-hackathon or when funded)
+- Initialize all pools on-chain
+- Seed pools with deposits for anonymity
+- Pool health indicators
 
 ---
 
@@ -426,6 +481,10 @@ src/
 | Proof gen too slow | Medium | High | Pre-generate test proofs, optimize circuit |
 | Devnet congestion | Low | Medium | Retry logic, clear user messaging |
 | Wallet adapter issues | Low | Low | Test with Phantom, Solflare, Backpack |
+| Wallet signature differs across devices | Low | High | Test deterministic signing across wallets |
+| Jupiter API rate limits | Medium | Medium | Cache quotes (30s TTL), show stale warning |
+| Swap slippage on large amounts | Medium | Medium | Show price impact, set max slippage (1%) |
+| Supabase downtime | Low | Medium | Fall back to localStorage, sync on recovery |
 | Demo day nerves | Medium | High | Record backup video, practice 5x |
 
 ---
@@ -433,17 +492,27 @@ src/
 ## 9. Deliverables Checklist
 
 ### Required for Submission
-- [ ] Deployed program on devnet
+- [x] Deployed program on devnet
 - [ ] Working frontend (Vercel)
 - [ ] Working backend (Railway/Render)
 - [ ] Demo video (< 3 min)
 - [ ] GitHub repo with README
 - [ ] Architecture diagram
+- [ ] Supabase project configured
+
+### Core Features
+- [x] Shield SOL into denomination pools
+- [x] Stealth withdraw via relayer
+- [ ] Private Swap (any token via Jupiter)
+- [ ] Encrypted cloud backup (Supabase)
+- [ ] Transaction history page
+- [ ] Deposit receipt export/import
+- [ ] Privacy delay toggle
 
 ### Nice to Have
-- [ ] Multiple token support (USDC)
-- [ ] Transaction history export
-- [ ] Mobile PWA
+- [ ] USDC shielding (coming soon badge in UI)
+- [ ] UI polish pass (V3.1)
+- [ ] Pool seeding (V4)
 
 ---
 

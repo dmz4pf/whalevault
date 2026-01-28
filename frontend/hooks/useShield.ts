@@ -32,11 +32,9 @@ export interface ShieldState {
 }
 
 export interface UseShieldReturn extends ShieldState {
-  shield: (amount: number, denomination?: number | null) => Promise<void>;
+  shield: (amount: number, denomination?: number | null, delayMs?: number | null) => Promise<void>;
   reset: () => void;
 }
-
-const STORAGE_KEY = "whalevault_positions";
 
 export function useShield(): UseShieldReturn {
   const wallet = useWallet();
@@ -56,7 +54,7 @@ export function useShield(): UseShieldReturn {
   }, []);
 
   const shield = useCallback(
-    async (amount: number, denomination?: number | null) => {
+    async (amount: number, denomination?: number | null, delayMs?: number | null) => {
       if (!publicKey) {
         setState({
           status: "error",
@@ -153,15 +151,10 @@ export function useShield(): UseShieldReturn {
           nonce: nonce,  // Critical: needed to re-derive secret during unshield
           // secret is intentionally NOT stored - derived on-demand for security
           denomination: denomination ?? null,
+          delayUntil: delayMs ? new Date(Date.now() + delayMs).toISOString() : null,
         };
 
-        // Persist to localStorage
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const positions: Position[] = stored ? JSON.parse(stored) : [];
-        positions.push(position);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
-
-        // Update store
+        // Update store (persist middleware handles localStorage + cloud sync)
         addPosition(position);
 
         // Create transaction record
