@@ -6,11 +6,11 @@ interface Props {
 
 function getPrivacyLevel(depositCount: number) {
   if (depositCount >= 20)
-    return { color: "text-green-400", bg: "bg-green-400", label: "Strong" };
+    return { color: "text-terminal-green", bg: "bg-terminal-green", label: "Strong" };
   if (depositCount >= 10)
-    return { color: "text-green-400", bg: "bg-green-400", label: "Good" };
+    return { color: "text-terminal-green", bg: "bg-terminal-green", label: "Good" };
   if (depositCount >= 5)
-    return { color: "text-yellow-400", bg: "bg-yellow-400", label: "Moderate" };
+    return { color: "text-yellow-500", bg: "bg-yellow-500", label: "Moderate" };
   return { color: "text-red-400", bg: "bg-red-400", label: "Low" };
 }
 

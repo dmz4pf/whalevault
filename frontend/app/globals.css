@@ -3,9 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 15, 23, 42;
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-elevated: #1c2128;
+  --terminal-green: #00a088;
+  --terminal-dim: #008570;
+  --terminal-dark: #006858;
+  --text: #e0e0e0;
+  --text-dim: #888888;
+  --text-muted: #383838;
+  --border: #1a1a1f;
+  --border-light: #252530;
+  --glow: rgba(0, 160, 136, 0.5);
+  --glow-subtle: rgba(0, 160, 136, 0.3);
 }
 
 * {
@@ -21,13 +31,10 @@ body {
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
+  color: var(--text);
+  background: var(--bg);
   min-height: 100vh;
+  font-family: var(--font-mono), "Share Tech Mono", monospace;
 }
 
 /* Custom scrollbar */
@@ -37,107 +44,188 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 160, 136, 0.05);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--terminal-dark);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--terminal-dim);
 }
 
-/* Animated gradient background */
-.animated-gradient {
-  background: linear-gradient(
-    -45deg,
-    #0c4a6e,
-    #581c87,
-    #0369a1,
-    #7c3aed
-  );
-  background-size: 400% 400%;
-  animation: gradient 15s ease infinite;
+/* Terminal text glow */
+.text-terminal {
+  color: var(--terminal-green);
+  text-shadow: 0 0 10px var(--terminal-green);
 }
 
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+/* Terminal card */
+.terminal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
-/* Glass effect */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.terminal-card:hover {
+  border-color: var(--terminal-dark);
+  background: rgba(0, 160, 136, 0.03);
 }
 
-/* Glow effects */
-.glow-whale {
-  box-shadow: 0 0 60px -15px rgba(168, 85, 247, 0.5);
+/* Terminal glow */
+.glow-terminal {
+  box-shadow: 0 0 30px rgba(0, 160, 136, 0.2);
 }
 
-.glow-vault {
-  box-shadow: 0 0 60px -15px rgba(14, 165, 233, 0.5);
-}
-
-/* Text gradient */
-.text-gradient {
-  background: linear-gradient(to right, #a855f7, #0ea5e9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Heading font utility */
+.font-heading {
+  font-family: var(--font-heading), "Chakra Petch", sans-serif;
 }
 
 /* Wallet adapter overrides */
 .wallet-adapter-button {
-  background: linear-gradient(to right, #9333ea, #0284c7) !important;
+  background: var(--terminal-green) !important;
+  color: var(--bg) !important;
+  font-family: var(--font-mono), "Share Tech Mono", monospace !important;
+}
+
+.wallet-adapter-button:hover {
+  background: var(--terminal-dim) !important;
 }
 
 .wallet-adapter-modal-wrapper {
-  background: rgba(0, 0, 0, 0.9) !important;
+  background: rgba(13, 17, 23, 0.95) !important;
   backdrop-filter: blur(20px) !important;
 }
 
 .wallet-adapter-modal-container {
-  background: rgba(15, 23, 42, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 1rem !important;
 }
 
 .wallet-adapter-modal-title {
-  color: white !important;
+  color: var(--text) !important;
+  font-family: var(--font-heading), "Chakra Petch", sans-serif !important;
 }
 
 .wallet-adapter-modal-list li {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(0, 160, 136, 0.05) !important;
   border-radius: 0.75rem !important;
   margin-bottom: 0.5rem !important;
 }
 
 .wallet-adapter-modal-list li:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(0, 160, 136, 0.1) !important;
 }
 
 /* Focus styles */
 :focus-visible {
-  outline: 2px solid rgba(168, 85, 247, 0.5);
+  outline: 2px solid var(--terminal-green);
   outline-offset: 2px;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(168, 85, 247, 0.3);
+  background: rgba(0, 160, 136, 0.3);
   color: white;
+}
+
+/* Background Animation Keyframes */
+@keyframes scrollLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes scrollRight {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0.008; }
+  50% { opacity: 0.012; }
+  75% { opacity: 0.006; }
+}
+
+.animate-flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* Terminal green text color */
+.text-terminal-green {
+  color: var(--terminal-green);
+}
+
+/* Fade animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glowIn {
+  from { opacity: 0; filter: blur(10px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes cursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-left { animation: fadeLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-right { animation: fadeRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-glow-in { animation: glowIn 0.5s ease-out forwards; }
+.animate-cursor-blink { animation: cursorBlink 1s infinite; }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays for animations */
+.stagger-1 { transition-delay: 0ms !important; }
+.stagger-2 { transition-delay: 150ms !important; }
+.stagger-3 { transition-delay: 300ms !important; }
+.stagger-4 { transition-delay: 450ms !important; }
+
+/* Left/Right reveal variants */
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal-left.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-right {
+  opacity: 0;
+  transform: translateX(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal-right.visible {
+  opacity: 1;
+  transform: translateX(0);
 }

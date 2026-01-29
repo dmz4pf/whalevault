@@ -4,7 +4,7 @@ import { forwardRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
@@ -21,18 +21,21 @@ interface ButtonProps {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-whale-600 to-vault-600 hover:from-whale-500 hover:to-vault-500 text-white shadow-lg shadow-whale-500/25",
+    "bg-terminal-green text-bg border-none hover:shadow-[0_0_30px_rgba(0,160,136,0.4)] hover:-translate-y-0.5",
   secondary:
-    "bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm border border-white/10",
+    "bg-transparent text-text-dim border border-border hover:border-terminal-dark hover:text-terminal-green",
   outline:
-    "border border-whale-500/50 hover:border-whale-500 text-whale-400 hover:text-whale-300 hover:bg-whale-500/10",
-  ghost: "hover:bg-white/5 text-gray-300 hover:text-white",
+    "bg-transparent text-terminal-green border border-terminal-green hover:bg-terminal-green hover:text-bg",
+  ghost:
+    "bg-transparent text-text-dim hover:text-terminal-green hover:bg-terminal-green/5",
+  danger:
+    "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20",
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-base",
-  lg: "px-6 py-3 text-lg",
+  sm: "px-4 py-2 text-xs",
+  md: "px-6 py-3 text-sm",
+  lg: "px-8 py-4 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -58,8 +61,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
         whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
         className={cn(
-          "relative inline-flex items-center justify-center rounded-lg font-medium transition-colors duration-200",
-          "focus:outline-none focus:ring-2 focus:ring-whale-500/50 focus:ring-offset-2 focus:ring-offset-gray-900",
+          "inline-flex items-center justify-center font-mono text-sm transition-all duration-300",
+          "focus:outline-none focus:ring-2 focus:ring-terminal-green/50 focus:ring-offset-2 focus:ring-offset-bg",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           variants[variant],
           sizes[size],
@@ -70,7 +73,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && (
           <svg
-            className="absolute left-1/2 -translate-x-1/2 h-5 w-5 animate-spin"
+            className="absolute left-1/2 -translate-x-1/2 h-4 w-4 animate-spin text-current"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

@@ -1,44 +1,60 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+"use client";
+
+import { Share_Tech_Mono, Chakra_Petch } from "next/font/google";
+import { usePathname } from "next/navigation";
 import { Toaster } from "sonner";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
+import { WalletRedirect } from "@/components/wallet/WalletRedirect";
 import { Header } from "@/components/layout/Header";
 import { ErrorBoundary } from "@/components/feedback/ErrorBoundary";
-import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
+import { BinaryRain, HexStream, CRTEffects } from "@/components/effects";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const shareTechMono = Share_Tech_Mono({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
-export const metadata: Metadata = {
-  title: APP_NAME,
-  description: APP_DESCRIPTION,
-  icons: {
-    icon: "/favicon.ico",
-  },
-};
+const chakraPetch = Chakra_Petch({
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-heading",
+});
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isSplash = pathname === "/";
+
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className={`${shareTechMono.variable} ${chakraPetch.variable} font-mono`}>
         <WalletProvider>
-          <div className="relative min-h-screen">
-            {/* Animated gradient background */}
-            <div className="fixed inset-0 -z-10">
-              <div className="absolute inset-0 bg-black" />
-              <div className="absolute inset-0 animated-gradient opacity-30" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-whale-900/20 via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-vault-900/20 via-transparent to-transparent" />
-            </div>
+          <WalletRedirect />
+          {/* Background Effects - only on non-splash pages */}
+          {!isSplash && (
+            <>
+              <BinaryRain opacity={0.05} />
+              <HexStream opacity={0.1} />
+              <CRTEffects />
+              <div
+                className="fixed inset-0 pointer-events-none z-[3]"
+                style={{
+                  background: 'radial-gradient(ellipse at 50% 40%, rgba(0, 160, 136, 0.04) 0%, transparent 50%)'
+                }}
+              />
+            </>
+          )}
 
-            <Header />
+          <div className="relative min-h-screen" style={{ zIndex: 10 }}>
+            {!isSplash && <Header />}
 
-            <main className="pt-28 pb-16 px-4">
-              <div className="max-w-7xl mx-auto">
+            <main className={isSplash ? "" : "pt-28 pb-16 px-4"}>
+              <div className={isSplash ? "" : "max-w-7xl mx-auto"}>
                 <ErrorBoundary>{children}</ErrorBoundary>
               </div>
             </main>
@@ -48,9 +64,9 @@ export default function RootLayout({
             position="bottom-right"
             toastOptions={{
               style: {
-                background: "rgba(15, 23, 42, 0.95)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "white",
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
               },
             }}
           />

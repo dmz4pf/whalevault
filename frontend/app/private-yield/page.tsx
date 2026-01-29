@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const YIELD_PROTOCOLS = [
   {
@@ -12,15 +13,8 @@ const YIELD_PROTOCOLS = [
     description: "Liquid staking with MEV rewards",
     apy: "~7-8%",
     risk: "Low",
-    riskColor: "text-green-400",
-    status: "First Integration",
-    statusColor: "bg-whale-500/20 text-whale-400",
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="2" className="text-purple-400" />
-        <path d="M16 8v8l6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-purple-400" />
-      </svg>
-    ),
+    status: "Active",
+    statusType: "active" as const,
   },
   {
     id: "kamino",
@@ -28,15 +22,8 @@ const YIELD_PROTOCOLS = [
     description: "Earn yield by lending SOL",
     apy: "~10-15%",
     risk: "Medium",
-    riskColor: "text-yellow-400",
-    status: "Coming Next",
-    statusColor: "bg-gray-500/20 text-gray-400",
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-        <rect x="6" y="10" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" className="text-blue-400" />
-        <path d="M10 10V8a6 6 0 1112 0v2" stroke="currentColor" strokeWidth="2" className="text-blue-400" />
-      </svg>
-    ),
+    status: "Coming Soon",
+    statusType: "coming-soon" as const,
   },
   {
     id: "marinade",
@@ -44,14 +31,8 @@ const YIELD_PROTOCOLS = [
     description: "Decentralized liquid staking",
     apy: "~6-7%",
     risk: "Low",
-    riskColor: "text-green-400",
     status: "Planned",
-    statusColor: "bg-gray-500/20 text-gray-400",
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
-        <path d="M16 4l12 8v8l-12 8-12-8v-8l12-8z" stroke="currentColor" strokeWidth="2" className="text-teal-400" />
-      </svg>
-    ),
+    statusType: "planned" as const,
   },
 ];
 
@@ -59,99 +40,103 @@ const FEATURES = [
   {
     title: "Hidden Positions",
     description: "Your deposit size, wallet address, and strategy remain completely private on-chain.",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-      </svg>
-    ),
+    icon: "👁️‍🗨️",
   },
   {
     title: "Aggregated Deposits",
     description: "Your funds join other users' deposits, creating a large anonymity set that hides individual positions.",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
+    icon: "👥",
   },
   {
     title: "Private Withdrawals",
     description: "Withdraw your principal + yield to any address without linking it to your original deposit.",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
+    icon: "🔐",
   },
   {
     title: "Battle-Tested Protocols",
     description: "We only integrate with audited, high-TVL protocols like Jito ($2B+) and Kamino ($1B+).",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
+    icon: "🛡️",
+  },
+];
+
+const STEPS = [
+  {
+    number: "[1]",
+    title: "Shield Your Assets",
+    description: "Deposit SOL into WhaleVault's shielded pools using zero-knowledge proofs.",
+  },
+  {
+    number: "[2]",
+    title: "Earn Private Yield",
+    description: "Your funds join an aggregate pool that earns yield from protocols like Jito.",
+  },
+  {
+    number: "[3]",
+    title: "Withdraw Anonymously",
+    description: "Withdraw principal + yield to any wallet without revealing your identity.",
   },
 ];
 
 export default function PrivateYieldPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-12 pb-20">
+    <div className="max-w-5xl mx-auto space-y-16 pb-20">
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center pt-8"
+        className="pt-8"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-whale-500/20 border border-whale-500/30 mb-6">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-whale-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-whale-500"></span>
-          </span>
-          <span className="text-sm font-medium text-whale-400">Coming Soon</span>
+        {/* Coming Soon Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-terminal-green/10 border border-terminal-green/30 rounded-full mb-6">
+          <span className="w-2 h-2 bg-terminal-green rounded-full animate-pulse" />
+          <span className="text-terminal-green text-sm font-mono">Coming Soon</span>
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-          Private Yield
+        <h1 className="font-heading text-4xl md:text-5xl font-bold text-white mb-4">
+          <span className="text-text-dim">&gt; </span>
+          Private{" "}
+          <span className="text-terminal-green" style={{ textShadow: "0 0 30px rgba(0, 160, 136, 0.4)" }}>
+            Yield
+          </span>
         </h1>
-        <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+        <p className="text-text-dim text-lg md:text-xl max-w-2xl leading-relaxed">
           Earn yield on your shielded assets without revealing your position size, wallet address, or strategy.
         </p>
       </motion.div>
 
-      {/* Value Proposition */}
+      {/* Value Proposition Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="bg-bg-card border border-border rounded-xl overflow-hidden relative"
       >
-        <Card gradient className="overflow-hidden">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  The Problem with DeFi Yield
-                </h2>
-                <p className="text-gray-400 mb-4">
-                  Today, earning yield on Solana means exposing everything. Your deposit amount, wallet address, and strategy are all visible on-chain. Competitors can copy your moves. MEV bots can front-run you. Adversaries know exactly how much you hold.
-                </p>
-                <p className="text-gray-300 font-medium">
-                  Private Yield changes that. Your funds earn yield while staying completely private.
-                </p>
+        {/* Subtle glow overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-terminal-green/[0.03] to-transparent pointer-events-none" />
+
+        <div className="p-8 md:p-10 relative z-10">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+            <div className="flex-1">
+              <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-4">
+                THE PROBLEM
               </div>
-              <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-whale-500/20 to-purple-500/20 flex items-center justify-center">
-                <svg className="w-24 h-24 text-whale-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <h2 className="font-heading text-2xl md:text-3xl font-semibold text-white mb-4">
+                The Problem with DeFi Yield
+              </h2>
+              <p className="text-text-dim mb-4 leading-relaxed">
+                Today, earning yield on Solana means exposing everything. Your deposit amount, wallet address, and strategy are all visible on-chain. Competitors can copy your moves. MEV bots can front-run you. Adversaries know exactly how much you hold.
+              </p>
+              <p className="text-text font-medium">
+                Private Yield changes that. Your funds earn yield while staying completely private.
+              </p>
+            </div>
+            <div className="w-40 h-40 md:w-48 md:h-48 rounded-xl bg-terminal-green/10 border border-terminal-green/20 flex items-center justify-center shrink-0">
+              <div className="text-6xl md:text-7xl text-terminal-green" style={{ textShadow: "0 0 40px rgba(0, 160, 136, 0.5)" }}>
+                💰
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
 
       {/* How It Works */}
@@ -159,37 +144,29 @@ export default function PrivateYieldPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="space-y-6"
+        className="space-y-8"
       >
-        <h2 className="text-2xl font-bold text-white text-center">How It Works</h2>
+        <SectionHeader>How It Works</SectionHeader>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {[
-            {
-              step: "1",
-              title: "Shield Your Assets",
-              description: "Deposit SOL into WhaleVault's shielded pools using zero-knowledge proofs.",
-            },
-            {
-              step: "2",
-              title: "Earn Private Yield",
-              description: "Your funds join an aggregate pool that earns yield from protocols like Jito.",
-            },
-            {
-              step: "3",
-              title: "Withdraw Anonymously",
-              description: "Withdraw principal + yield to any wallet without revealing your identity.",
-            },
-          ].map((item, i) => (
-            <Card key={i}>
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-whale-500/20 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-bold text-whale-400">{item.step}</span>
+          {STEPS.map((step, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 + i * 0.1 }}
+              className="bg-bg-card border border-border rounded-xl p-6 hover:border-terminal-dark transition-all"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-terminal-green/20 flex items-center justify-center text-terminal-green font-heading font-bold shrink-0">
+                  {step.number}
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-400">{item.description}</p>
-              </CardContent>
-            </Card>
+                <div>
+                  <div className="text-white font-heading text-lg mb-2">{step.title}</div>
+                  <div className="text-text-dim text-sm leading-relaxed">{step.description}</div>
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
       </motion.div>
@@ -199,67 +176,96 @@ export default function PrivateYieldPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="space-y-6"
+        className="space-y-8"
       >
-        <h2 className="text-2xl font-bold text-white text-center">Privacy Features</h2>
+        <SectionHeader>Privacy Features</SectionHeader>
 
         <div className="grid md:grid-cols-2 gap-6">
           {FEATURES.map((feature, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-whale-400 shrink-0">
-                    {feature.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
-                    <p className="text-sm text-gray-400">{feature.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 + i * 0.1 }}
+              className="bg-bg-card border border-border rounded-xl p-6 hover:border-terminal-dark transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-terminal-green/20 flex items-center justify-center text-2xl mb-4">
+                {feature.icon}
+              </div>
+              <div className="text-white font-heading text-lg mb-2">{feature.title}</div>
+              <div className="text-text-dim text-sm leading-relaxed">{feature.description}</div>
+            </motion.div>
           ))}
         </div>
       </motion.div>
 
-      {/* Supported Protocols */}
+      {/* Yield Protocols */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="space-y-6"
+        className="space-y-8"
       >
-        <h2 className="text-2xl font-bold text-white text-center">Yield Protocols</h2>
+        <SectionHeader>Yield Protocols</SectionHeader>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {YIELD_PROTOCOLS.map((protocol) => (
-            <Card key={protocol.id} className="relative overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
-                    {protocol.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{protocol.name}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${protocol.statusColor}`}>
-                      {protocol.status}
-                    </span>
+          {YIELD_PROTOCOLS.map((protocol, i) => {
+            const isActive = protocol.statusType === "active";
+            const isComingSoon = protocol.statusType === "coming-soon";
+            const isPlanned = protocol.statusType === "planned";
+
+            return (
+              <motion.div
+                key={protocol.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 + i * 0.1 }}
+                className={cn(
+                  "bg-bg-card border rounded-xl p-6 transition-all",
+                  isActive ? "border-terminal-green" : "border-border hover:border-terminal-dark"
+                )}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-bg-elevated flex items-center justify-center text-lg">
+                      {protocol.id === "jito" && "🟣"}
+                      {protocol.id === "kamino" && "🔵"}
+                      {protocol.id === "marinade" && "🟢"}
+                    </div>
+                    <span className="text-white font-heading">{protocol.name}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-400 mb-4">{protocol.description}</p>
-                <div className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="text-gray-500">APY</span>
-                    <p className="text-white font-semibold">{protocol.apy}</p>
+
+                <p className="text-text-dim text-sm mb-4">{protocol.description}</p>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-dim">APY</span>
+                    <span className="text-terminal-green font-medium">{protocol.apy}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-gray-500">Risk</span>
-                    <p className={`font-semibold ${protocol.riskColor}`}>{protocol.risk}</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-dim">Risk</span>
+                    <span className={cn(
+                      "font-medium",
+                      protocol.risk === "Low" && "text-green-400",
+                      protocol.risk === "Medium" && "text-yellow-400"
+                    )}>{protocol.risk}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <div className="pt-3 border-t border-border">
+                  <span className={cn(
+                    "text-xs px-2 py-1 rounded",
+                    isActive && "bg-terminal-green/20 text-terminal-green",
+                    isComingSoon && "bg-yellow-500/20 text-yellow-500",
+                    isPlanned && "bg-text-muted/20 text-text-muted"
+                  )}>
+                    {protocol.status}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
 
@@ -268,29 +274,34 @@ export default function PrivateYieldPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
+        className="bg-bg-card border border-border rounded-xl p-8 md:p-12 text-center relative overflow-hidden"
       >
-        <Card gradient>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Get Early Access
-            </h2>
-            <p className="text-gray-400 mb-6 max-w-lg mx-auto">
-              Private Yield is currently in development. Start by shielding your assets today — you&apos;ll be ready to earn private yield as soon as it launches.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/shield">
-                <Button size="lg">
-                  Shield Assets Now
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="outline" size="lg">
-                  View Dashboard
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Subtle glow overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-terminal-green/[0.03] to-transparent pointer-events-none" />
+
+        <div className="relative z-10">
+          <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-4">
+            GET STARTED
+          </div>
+          <h2 className="font-heading text-2xl md:text-3xl font-semibold text-white mb-3">
+            Ready to Earn Private Yield?
+          </h2>
+          <p className="text-text-dim mb-8 max-w-lg mx-auto">
+            Private Yield is currently in development. Start by shielding your assets today — you&apos;ll be ready to earn private yield as soon as it launches.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/shield">
+              <Button size="lg" className="min-w-[180px] font-mono tracking-wider">
+                ./shield-now
+              </Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="outline" size="lg" className="min-w-[180px] font-mono tracking-wider">
+                ./view-dashboard
+              </Button>
+            </Link>
+          </div>
+        </div>
       </motion.div>
 
       {/* Technical Details */}
@@ -298,17 +309,18 @@ export default function PrivateYieldPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="text-center text-sm text-gray-500"
+        className="text-center text-sm text-text-dim space-y-1"
       >
-        <p>
-          Private Yield uses a share-based accounting system with encrypted position tracking.
-          <br />
-          All user data is encrypted client-side before storage.
-          <br />
-          <Link href="https://github.com/whalevault/whalevault" target="_blank" rel="noopener noreferrer" className="text-whale-400 hover:text-whale-300">
-            View Technical Documentation
-          </Link>
-        </p>
+        <p>Private Yield uses a share-based accounting system with encrypted position tracking.</p>
+        <p>All user data is encrypted client-side before storage.</p>
+        <Link
+          href="https://github.com/whalevault/whalevault"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-terminal-green hover:text-terminal-dim transition-colors inline-block mt-2"
+        >
+          ./view-technical-docs
+        </Link>
       </motion.div>
     </div>
   );

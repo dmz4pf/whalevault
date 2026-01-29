@@ -30,11 +30,11 @@ export function PrivacyWarning({ isCustom, onSwitchToFixed }: Props) {
           <h4 className="font-medium text-yellow-500 text-sm">
             Reduced Privacy
           </h4>
-          <p className="text-sm text-gray-400 mt-1">{CUSTOM_AMOUNT_WARNING}</p>
+          <p className="text-sm text-text-dim mt-1">{CUSTOM_AMOUNT_WARNING}</p>
           {onSwitchToFixed && (
             <button
               onClick={onSwitchToFixed}
-              className="text-sm text-whale-400 mt-2 hover:underline"
+              className="text-sm text-terminal-green mt-2 hover:underline"
             >
               Switch to fixed denomination &rarr;
             </button>

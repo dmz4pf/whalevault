@@ -18,14 +18,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        whileHover={hover ? { scale: 1.02, y: -4 } : undefined}
+        whileHover={hover ? { y: -4, scale: 1.01 } : undefined}
         className={cn(
-          "relative rounded-2xl backdrop-blur-xl",
-          "border border-white/10",
-          gradient
-            ? "bg-gradient-to-br from-white/10 via-white/5 to-transparent"
-            : "bg-white/5",
-          hover && "cursor-pointer transition-shadow hover:shadow-xl hover:shadow-whale-500/10",
+          "rounded-xl bg-bg-card border border-border",
+          hover && "transition-all duration-300 cursor-pointer hover:border-terminal-dark hover:bg-terminal-green/[0.03]",
+          gradient && "bg-gradient-to-br from-terminal-green/5 via-transparent to-transparent",
           className
         )}
         {...props}
@@ -45,7 +42,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className }: CardHeaderProps) {
   return (
-    <div className={cn("px-6 py-4 border-b border-white/10", className)}>
+    <div className={cn("px-6 py-4 border-b border-border", className)}>
       {children}
     </div>
   );
@@ -67,7 +64,7 @@ interface CardFooterProps {
 
 export function CardFooter({ children, className }: CardFooterProps) {
   return (
-    <div className={cn("px-6 py-4 border-t border-white/10", className)}>
+    <div className={cn("px-6 py-4 border-t border-border", className)}>
       {children}
     </div>
   );

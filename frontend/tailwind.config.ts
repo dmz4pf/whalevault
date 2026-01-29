@@ -8,7 +8,31 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        mono: ["var(--font-mono)", "Share Tech Mono", "monospace"],
+        heading: ["var(--font-heading)", "Chakra Petch", "sans-serif"],
+      },
       colors: {
+        terminal: {
+          green: "#00a088",
+          dim: "#008570",
+          dark: "#006858",
+        },
+        bg: {
+          DEFAULT: "#0d1117",
+          card: "#161b22",
+          elevated: "#1c2128",
+        },
+        border: {
+          DEFAULT: "#1a1a1f",
+          light: "#252530",
+        },
+        text: {
+          DEFAULT: "#e0e0e0",
+          dim: "#888888",
+          muted: "#383838",
+        },
+        // Keep whale/vault for backwards compatibility during migration
         vault: {
           50: "#f0f9ff",
           100: "#e0f2fe",
@@ -47,6 +71,13 @@ const config: Config = {
         "gradient-xy": "gradient-xy 15s ease infinite",
         float: "float 6s ease-in-out infinite",
         "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "scroll-left": "scrollLeft 40s linear infinite",
+        "scroll-right": "scrollRight 40s linear infinite",
+        "cursor-blink": "cursorBlink 1s infinite",
+        flicker: "flicker 0.15s infinite",
+        "fade-up": "fadeUp 0.5s ease forwards",
+        "fade-left": "fadeLeft 0.5s ease forwards",
+        "fade-right": "fadeRight 0.5s ease forwards",
       },
       keyframes: {
         "gradient-y": {
@@ -82,6 +113,35 @@ const config: Config = {
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-20px)" },
+        },
+        scrollLeft: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
+        scrollRight: {
+          from: { transform: "translateX(-50%)" },
+          to: { transform: "translateX(0)" },
+        },
+        cursorBlink: {
+          "0%, 50%": { opacity: "1" },
+          "51%, 100%": { opacity: "0" },
+        },
+        flicker: {
+          "0%": { opacity: "0.008" },
+          "50%": { opacity: "0.015" },
+          "100%": { opacity: "0.008" },
+        },
+        fadeUp: {
+          from: { opacity: "0", transform: "translateY(30px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeLeft: {
+          from: { opacity: "0", transform: "translateX(-30px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        fadeRight: {
+          from: { opacity: "0", transform: "translateX(30px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
         },
       },
     },
