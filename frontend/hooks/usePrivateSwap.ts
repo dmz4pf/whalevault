@@ -173,6 +173,8 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
       await pollForProof(jobId);
 
       // Step 4: Unshield SOL to user's wallet via relayer
+      // Note: For devnet swap, we unshield to the user's wallet first, then they sign the Raydium swap
+      // The recipient parameter is for the FINAL destination after the swap
       setState((prev) => ({
         ...prev,
         status: "unshielding",
@@ -204,9 +206,12 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
       const { rawResponse } = await getRaydiumQuote(SOL_MINT, outputMint, position.amount);
       const swapData = rawResponse;
 
+      // Build swap tx - tokens go to RECIPIENT's wallet, not signer's
+      console.log(`[PrivateSwap] Building swap tx: signer=${publicKey.toBase58()}, recipient=${recipient}`);
       const serializedTx = await buildRaydiumSwapTransaction(
         swapData,
-        publicKey.toBase58()
+        publicKey.toBase58(),
+        recipient  // Tokens will be sent to recipient's ATA
       );
 
       // Step 6: User signs and sends the swap transaction

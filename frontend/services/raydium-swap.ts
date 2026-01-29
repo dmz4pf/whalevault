@@ -1,3 +1,5 @@
+import { PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { SOLANA_RPC_URL } from "@/lib/constants";
 import type { SwapQuoteResponse } from "@/types/api";
 
@@ -90,11 +92,34 @@ export async function getRaydiumQuote(
  *
  * IMPORTANT: swapResponse must be the FULL quote response object (with id, success, version, data),
  * not just the .data portion. Raydium's API validates the entire response structure.
+ *
+ * @param swapResponse - Full quote response from getRaydiumQuote
+ * @param walletPublicKey - The wallet that will SIGN the transaction
+ * @param recipientPublicKey - The wallet that will RECEIVE the output tokens (can be different!)
  */
 export async function buildRaydiumSwapTransaction(
   swapResponse: RaydiumComputeResponse,
-  walletPublicKey: string
+  walletPublicKey: string,
+  recipientPublicKey?: string
 ): Promise<string> {
+  const outputMint = swapResponse.data?.outputMint;
+  const recipient = recipientPublicKey || walletPublicKey;
+
+  // Derive the recipient's Associated Token Account for the output token
+  // This is where the swapped tokens will be sent
+  let outputAccount: string | undefined;
+  if (outputMint) {
+    try {
+      const recipientPubkey = new PublicKey(recipient);
+      const outputMintPubkey = new PublicKey(outputMint);
+      const ata = getAssociatedTokenAddressSync(outputMintPubkey, recipientPubkey);
+      outputAccount = ata.toBase58();
+      console.log(`[Raydium] Output tokens will go to ${recipient}'s ATA: ${outputAccount}`);
+    } catch (e) {
+      console.warn("[Raydium] Could not derive ATA, tokens will go to signer's wallet");
+    }
+  }
+
   const res = await fetch(`${RAYDIUM_DEVNET_SWAP_HOST}/transaction/swap-base-in`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -104,7 +129,8 @@ export async function buildRaydiumSwapTransaction(
       wallet: walletPublicKey,
       txVersion: "V0",
       wrapSol: true,    // Auto-wrap native SOL to wSOL for swap
-      unwrapSol: true,  // Auto-unwrap wSOL back to native SOL after swap
+      unwrapSol: false, // Don't unwrap - we're sending to a token account
+      outputAccount,    // Send output tokens to recipient's ATA
     }),
   });
 
