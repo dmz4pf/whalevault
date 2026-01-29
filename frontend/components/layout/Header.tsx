@@ -6,11 +6,19 @@ import { motion } from "framer-motion";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  newTab?: boolean;
+  badge?: string;
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/shield", label: "Shield" },
   { href: "/unshield", label: "Stealth Withdraw" },
   { href: "/private-swap", label: "Private Swap" },
+  { href: "/private-yield", label: "Private Yield", newTab: true, badge: "Soon" },
   { href: "/history", label: "History" },
 ];
 
@@ -49,10 +57,14 @@ export function Header() {
               <nav className="hidden md:flex items-center gap-1">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
+                  const linkProps = item.newTab
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {};
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      {...linkProps}
                       className={cn(
                         "relative px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                         isActive
@@ -67,7 +79,19 @@ export function Header() {
                           transition={{ type: "spring", duration: 0.5 }}
                         />
                       )}
-                      <span className="relative z-10">{item.label}</span>
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        {item.label}
+                        {item.badge && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-whale-500/20 text-whale-400 font-medium">
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.newTab && (
+                          <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        )}
+                      </span>
                     </Link>
                   );
                 })}

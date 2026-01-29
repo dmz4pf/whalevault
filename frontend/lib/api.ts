@@ -215,7 +215,7 @@ export async function getSwapQuote(
 }
 
 /**
- * Execute a private swap: unshield + swap in one atomic operation
+ * Execute a private swap: unshield + swap in one atomic operation (mainnet via Jupiter)
  */
 export async function executeSwap(
   jobId: string,
@@ -223,6 +223,28 @@ export async function executeSwap(
   outputMint: string
 ): Promise<SwapExecuteResponse> {
   return fetchApi<SwapExecuteResponse>("/swap/execute", {
+    method: "POST",
+    body: JSON.stringify({ job_id: jobId, recipient, output_mint: outputMint }),
+  });
+}
+
+/**
+ * Execute a privacy-preserving swap on devnet via Raydium.
+ *
+ * PRIVACY-PRESERVING: The relayer receives unshielded SOL and signs the swap.
+ * The user's wallet NEVER appears in the transaction chain.
+ * Tokens are sent directly to the recipient's Associated Token Account.
+ *
+ * @param jobId - The proof job ID from /unshield/proof
+ * @param recipient - Solana address to receive the swapped tokens
+ * @param outputMint - Target token mint address
+ */
+export async function executeSwapDevnet(
+  jobId: string,
+  recipient: string,
+  outputMint: string
+): Promise<SwapExecuteResponse> {
+  return fetchApi<SwapExecuteResponse>("/swap/execute-devnet", {
     method: "POST",
     body: JSON.stringify({ job_id: jobId, recipient, output_mint: outputMint }),
   });

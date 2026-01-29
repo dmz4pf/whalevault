@@ -86,7 +86,16 @@ A working demo where a user can:
 | **Pool Health Indicators** | Anonymity set quality per pool | P1 | V4 |
 | **UI Enhancement** | Premium visual polish, animations, glassmorphism | P1 | V3.1 |
 
-### 2.3 What We're NOT Building
+### 2.3 Future Features (Roadmap)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Private Yield** | Earn yield on shielded assets via Jito/Kamino without revealing position | Coming Soon |
+| **SPL Token Shielding** | Shield USDC, USDT, and other SPL tokens directly | Planned |
+| **Multi-sig Vaults** | Squads-style governance for institutional treasuries | Planned |
+| **Viewing Keys** | Selective disclosure for compliance/auditing | Planned |
+
+### 2.4 What We're NOT Building (V1)
 
 - ❌ SPL token shielding (SOL-only deposits; USDC "Coming Soon" in UI)
 - ❌ Private transfers between users
@@ -471,6 +480,17 @@ frontend/
 - Initialize all pools on-chain
 - Seed pools with deposits for anonymity
 - Pool health indicators
+
+### V5: Private Yield (Future — Q1 2026)
+- Privacy-preserving yield aggregation
+- Jito liquid staking integration (first protocol)
+- Kamino lending integration (second protocol)
+- See: `/docs/plans/private-yield-design.md`
+
+### V6: Institutional Features (Future — Q2 2026)
+- Multi-sig privacy vaults (Squads integration)
+- Viewing keys for selective disclosure
+- Compliance-friendly audit trails
 
 ---
 

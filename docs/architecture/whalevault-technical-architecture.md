@@ -1699,6 +1699,70 @@ const DISCRIMINATORS = {
 
 ---
 
+---
+
+## 13. Future: Private Yield Architecture
+
+> **Status:** Coming Soon — See `/docs/plans/private-yield-design.md` for full design.
+
+### 13.1 High-Level Approach
+
+Private Yield acts as a **privacy wrapper** around existing Solana yield protocols (Jito, Kamino). Users deposit shielded assets, WhaleVault aggregates them, and deploys to yield protocols. Individual positions remain hidden — only the aggregate is visible on-chain.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     PRIVATE YIELD FLOW                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User's Shielded Position                                       │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────────┐                                            │
+│  │  Deposit to     │  User proves ownership, backend unshields │
+│  │  Yield          │  and deposits to yield protocol           │
+│  └────────┬────────┘                                            │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │              WhaleVault Yield Aggregator                 │    │
+│  │  - Aggregates all user deposits                         │    │
+│  │  - Deposits aggregate to Jito/Kamino                    │    │
+│  │  - Tracks user shares (encrypted in Supabase)           │    │
+│  │  - Distributes yield proportionally                     │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                          │                                       │
+│                          ▼                                       │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                  ON-CHAIN (Visible)                        │  │
+│  │  "WhaleVault vault staked 50,000 SOL with Jito"           │  │
+│  │                                                            │  │
+│  │  Individual user deposits: HIDDEN                         │  │
+│  │  Individual user shares: HIDDEN                           │  │
+│  │  Individual withdrawals: HIDDEN (goes through relayer)    │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.2 Key Components (Future Implementation)
+
+| Component | Description |
+|-----------|-------------|
+| `/api/yield/protocols` | List available protocols with current APY |
+| `/api/yield/deposit` | Deposit shielded position to yield protocol |
+| `/api/yield/withdraw` | Withdraw with accumulated yield |
+| `YieldPosition` type | Encrypted position with share accounting |
+| `usePrivateYield` hook | Frontend state management for yield flow |
+
+### 13.3 Supported Protocols (Planned)
+
+| Protocol | Type | Risk | Priority |
+|----------|------|------|----------|
+| **Jito** | Liquid Staking | Low | First integration |
+| **Kamino** | Lending | Medium | Second integration |
+
+---
+
 *Document generated: January 25, 2026*
 *Updated for V2 (multi-pool, relayer) + V3 (Supabase, Private Swap, Stealth Withdraw): January 27, 2026*
+*Updated for V5 Private Yield architecture preview: January 29, 2026*
 *Ready for implementation*

@@ -2,16 +2,14 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useConnection } from "@solana/wallet-adapter-react";
-import { VersionedTransaction } from "@solana/web3.js";
 import {
   requestUnshieldProof,
   getProofStatus,
   getSwapQuote,
   executeSwap,
-  relayUnshield,
+  executeSwapDevnet,
 } from "@/lib/api";
-import { getRaydiumQuote, buildRaydiumSwapTransaction } from "@/services/raydium-swap";
+import { getRaydiumQuote } from "@/services/raydium-swap";
 import type { RaydiumComputeResponse } from "@/services/raydium-swap";
 import { waitForTransactionConfirmation } from "@/lib/verification";
 import { usePositionsStore } from "@/stores/positions";
@@ -69,8 +67,7 @@ const isDevnet = SOLANA_NETWORK === "devnet";
 
 export function usePrivateSwap(): UsePrivateSwapReturn {
   const wallet = useWallet();
-  const { publicKey, signTransaction } = wallet;
-  const { connection } = useConnection();
+  const { publicKey } = wallet;
   const { updatePosition } = usePositionsStore();
   const { addTransaction } = useTransactionsStore();
 
@@ -142,15 +139,15 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
 
   const swapDevnet = useCallback(
     async (position: Position, outputMint: string, recipient: string) => {
-      if (!publicKey || !signTransaction) {
-        throw new Error("Wallet not connected or does not support signing");
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
       }
 
-      // Step 1: Derive secret
+      // Step 1: Derive secret (requires wallet signature)
       setState({
         ...INITIAL_STATE,
         status: "deriving",
-        proofStage: "Deriving secret...",
+        proofStage: "Requesting signature to derive secret...",
       });
       const secret = await getPositionSecret(position, wallet);
 
@@ -172,73 +169,35 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
       setState((prev) => ({ ...prev, status: "generating" }));
       await pollForProof(jobId);
 
-      // Step 4: Unshield SOL to user's wallet via relayer
-      // Note: For devnet swap, we unshield to the user's wallet first, then they sign the Raydium swap
-      // The recipient parameter is for the FINAL destination after the swap
+      // Step 4: Execute swap via backend (PRIVACY-PRESERVING)
+      // The relayer receives unshielded SOL and signs the Raydium swap.
+      // User's wallet NEVER appears in the transaction chain.
+      // Tokens go directly to recipient's ATA.
       setState((prev) => ({
         ...prev,
-        status: "unshielding",
-        proofStage: "Unshielding SOL to wallet...",
+        status: "executing",
+        proofStage: "Executing private swap...",
       }));
-      const relayResult = await relayUnshield(jobId, publicKey.toBase58());
-      const unshieldSignature = relayResult.signature;
 
-      // Wait for unshield confirmation
-      const unshieldConfirmed = await waitForTransactionConfirmation(
-        unshieldSignature,
-        30,
-        1000
-      );
-      if (!unshieldConfirmed) {
-        throw new Error("Unshield transaction was not confirmed on-chain.");
+      console.log(`[PrivateSwap] Calling backend: recipient=${recipient}, outputMint=${outputMint}`);
+      const swapResult = await executeSwapDevnet(jobId, recipient, outputMint);
+
+      // Handle partial success (unshield ok, swap failed)
+      if (!swapResult.swapSignature) {
+        throw new Error("Swap failed after unshield - SOL in relayer wallet. Contact support.");
       }
 
-      // Step 5: Build Raydium swap transaction
-      setState((prev) => ({
-        ...prev,
-        status: "building_route",
-        proofStage: "Building swap route...",
-        unshieldSignature,
-      }));
-
-      // Always fetch fresh quote - cached data is stale after unshield
-      console.log("[PrivateSwap] Fetching fresh Raydium quote after unshield...");
-      const { rawResponse } = await getRaydiumQuote(SOL_MINT, outputMint, position.amount);
-      const swapData = rawResponse;
-
-      // Build swap tx - tokens go to RECIPIENT's wallet, not signer's
-      console.log(`[PrivateSwap] Building swap tx: signer=${publicKey.toBase58()}, recipient=${recipient}`);
-      const serializedTx = await buildRaydiumSwapTransaction(
-        swapData,
-        publicKey.toBase58(),
-        recipient  // Tokens will be sent to recipient's ATA
-      );
-
-      // Step 6: User signs and sends the swap transaction
-      setState((prev) => ({
-        ...prev,
-        status: "swapping",
-        proofStage: "Sign the swap transaction in your wallet...",
-      }));
-
-      const txBuffer = Buffer.from(serializedTx, "base64");
-      const versionedTx = VersionedTransaction.deserialize(txBuffer);
-      const signedTx = await signTransaction(versionedTx);
-      const swapSignature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
-
-      // Step 7: Confirm swap on-chain
+      // Step 5: Confirm swap on-chain
       setState((prev) => ({
         ...prev,
         status: "confirming",
         proofStage: "Confirming swap on chain...",
-        swapSignature,
+        unshieldSignature: swapResult.unshieldSignature,
+        swapSignature: swapResult.swapSignature,
       }));
 
       const swapConfirmed = await waitForTransactionConfirmation(
-        swapSignature,
+        swapResult.swapSignature,
         30,
         1000
       );
@@ -246,9 +205,13 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
         throw new Error("Swap transaction was not confirmed on-chain.");
       }
 
-      return { unshieldSignature, swapSignature };
+      return {
+        unshieldSignature: swapResult.unshieldSignature,
+        swapSignature: swapResult.swapSignature,
+        outputAmount: swapResult.outputAmount,
+      };
     },
-    [publicKey, signTransaction, wallet, connection, pollForProof]
+    [publicKey, wallet, pollForProof]
   );
 
   const swapMainnet = useCallback(
