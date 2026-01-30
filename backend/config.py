@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     solana_rpc_url: str = "https://api.devnet.solana.com"
     program_id: str = "3qhVPvz8T1WiozCLEfhUuv8WZHDPpEfnAzq2iSatULc7"
-    cors_origins: str = "http://localhost:3000,http://localhost:3001"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001,https://whalevault.vercel.app"
     debug: bool = True
 
     # Relayer configuration
