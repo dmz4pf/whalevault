@@ -8,9 +8,9 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ProofAnimation } from "@/components/proof/ProofAnimation";
 import { useWallet } from "@/hooks/useWallet";
 import { useUnshield } from "@/hooks/useUnshield";
-import { useConfetti } from "@/hooks/useConfetti";
 import { usePositionsStore } from "@/stores/positions";
 import { cn } from "@/lib/utils";
 import { LAMPORTS_PER_SOL, FIXED_DENOMINATIONS } from "@/lib/constants";
@@ -81,8 +81,7 @@ export default function UnshieldPage() {
   const router = useRouter();
   const { connected, publicKey } = useWallet();
   const { positions: storePositions } = usePositionsStore();
-  const { status, error, proofProgress, unshield, reset } = useUnshield();
-  const { fire: fireConfetti } = useConfetti();
+  const { status, error, proofProgress, proofStage, unshield, reset } = useUnshield();
 
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedAction, setSelectedAction] = useState<UnshieldAction>("send");
@@ -97,8 +96,10 @@ export default function UnshieldPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter to only shielded positions
-  const shieldedPositions = storePositions.filter((p) => p.status === "shielded");
+  // Filter to only shielded positions, sorted by most recent first
+  const shieldedPositions = storePositions
+    .filter((p) => p.status === "shielded")
+    .sort((a, b) => b.timestamp - a.timestamp);
 
   const isLoading =
     status === "deriving" ||
@@ -110,7 +111,6 @@ export default function UnshieldPage() {
   // Handle success/error
   useEffect(() => {
     if (status === "success") {
-      fireConfetti();
       toast.success("Stealth withdrawal complete!");
       setSelectedPosition(null);
       reset();
@@ -118,7 +118,7 @@ export default function UnshieldPage() {
     } else if (status === "error" && error) {
       toast.error("Stealth withdrawal failed", { description: error });
     }
-  }, [status, error, reset, router, fireConfetti]);
+  }, [status, error, reset, router]);
 
   const handleUnshield = async () => {
     if (!selectedPosition || !publicKey) return;
@@ -259,7 +259,7 @@ export default function UnshieldPage() {
               >
                 <SectionHeader>Select Position</SectionHeader>
               </motion.div>
-              <div className="space-y-[10px] max-h-[350px] overflow-y-auto mb-[25px]">
+              <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto mb-[25px]">
                 {shieldedPositions.map((position, index) => {
                   const timeLeft = position.delayUntil
                     ? formatTimeRemaining(position.delayUntil)
@@ -270,77 +270,42 @@ export default function UnshieldPage() {
                   return (
                     <motion.button
                       key={position.id}
-                      initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.3 + index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
                       onClick={() => !isLocked && setSelectedPosition(position)}
                       disabled={isLoading || isLocked}
                       className={cn(
-                        "w-full p-[18px] px-5 rounded-lg border cursor-pointer transition-all text-left",
-                        "bg-[rgba(0,0,0,0.3)]",
+                        "w-full flex items-center justify-between py-3.5 px-4 transition-all text-left",
+                        index !== 0 && "border-t border-border/50",
                         isSelected
-                          ? "border-terminal-green bg-[rgba(0,160,136,0.08)]"
-                          : isLocked
-                            ? "border-yellow-500/30 bg-yellow-500/5 cursor-not-allowed"
-                            : "border-border hover:border-terminal-dark",
+                          ? "bg-terminal-green/15 border-l-2 border-l-terminal-green"
+                          : "border-l-2 border-l-transparent",
+                        isLocked
+                          ? "bg-yellow-500/5 cursor-not-allowed"
+                          : !isSelected && "hover:bg-white/[0.02]",
                         isLoading && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-[15px]">
-                          <div
-                            className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center",
-                              isLocked
-                                ? "bg-yellow-500/10"
-                                : "bg-terminal-dark"
-                            )}
-                          >
-                            {isLocked ? (
-                              <svg
-                                className="w-5 h-5 text-yellow-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                            ) : (
-                              <span className="text-terminal-green font-semibold text-sm">
-                                {"\u25CE"}
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-[10px]">
-                              <span className="font-heading text-[15px] font-semibold text-white">
-                                {formatSOL(position.shieldedAmount)} {position.token}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 bg-terminal-green/20 text-terminal-green rounded">
-                                {getDenominationLabel(position.denomination)} Pool
-                              </span>
-                            </div>
-                            <div className="text-text-dim text-xs mt-1">
-                              Shielded {formatRelativeTime(position.timestamp)}
-                            </div>
-                            {isLocked && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="text-xs text-yellow-400">
-                                  Available in {timeLeft}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="font-heading text-base font-medium text-white">
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "font-mono text-sm w-24 text-left",
+                          isLocked ? "text-yellow-400" : "text-terminal-green"
+                        )}>
                           {formatSOL(position.shieldedAmount)} SOL
-                        </div>
+                        </span>
+                        <span className="text-xs text-text-dim font-mono">
+                          {getDenominationLabel(position.denomination)}
+                        </span>
+                        {isLocked && (
+                          <span className="text-xs text-yellow-400">
+                            ({timeLeft})
+                          </span>
+                        )}
                       </div>
+                      <span className="text-xs text-text-dim">
+                        {formatRelativeTime(position.timestamp)}
+                      </span>
                     </motion.button>
                   );
                 })}
@@ -434,15 +399,17 @@ export default function UnshieldPage() {
               >
                 <SectionHeader>Recipient</SectionHeader>
                 <div className="bg-[rgba(0,0,0,0.3)] border border-border rounded-xl p-4 space-y-4">
-                  {/* Toggle */}
-                  <div className="flex items-center justify-between">
+                  {/* Toggle - entire row clickable */}
+                  <button
+                    type="button"
+                    onClick={() => !isLoading && setUseDifferentAddress(!useDifferentAddress)}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-between cursor-pointer"
+                  >
                     <span className="text-text-dim text-xs">
                       Different Address
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setUseDifferentAddress(!useDifferentAddress)}
-                      disabled={isLoading}
+                    <div
                       className={cn(
                         "w-12 h-6 rounded-full transition-colors relative",
                         useDifferentAddress
@@ -458,8 +425,8 @@ export default function UnshieldPage() {
                             : "translate-x-0.5 bg-text"
                         )}
                       />
-                    </button>
-                  </div>
+                    </div>
+                  </button>
 
                   {/* Address Input */}
                   {useDifferentAddress && (
@@ -583,6 +550,11 @@ export default function UnshieldPage() {
                   </span>
                 </div>
               </motion.div>
+            )}
+
+            {/* ZK Proof Animation */}
+            {isLoading && (
+              <ProofAnimation progress={proofProgress} stage={proofStage} />
             )}
 
             {/* Submit Button */}

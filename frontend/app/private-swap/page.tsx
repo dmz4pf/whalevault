@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -11,13 +12,37 @@ import { ProofAnimation } from "@/components/proof/ProofAnimation";
 import { TokenSelector } from "@/components/swap/TokenSelector";
 import { useWallet } from "@/hooks/useWallet";
 import { usePrivateSwap } from "@/hooks/usePrivateSwap";
-import { useConfetti } from "@/hooks/useConfetti";
 import { usePositionsStore } from "@/stores/positions";
 import { cn } from "@/lib/utils";
 import { LAMPORTS_PER_SOL, FIXED_DENOMINATIONS } from "@/lib/constants";
 import Link from "next/link";
 import type { Position } from "@/types";
 import type { FeaturedToken } from "@/lib/tokens";
+
+const DELAY_PRESETS = [
+  { label: "Instant", ms: 0 },
+  { label: "1h", ms: 60 * 60 * 1000 },
+  { label: "6h", ms: 6 * 60 * 60 * 1000 },
+  { label: "12h", ms: 12 * 60 * 60 * 1000 },
+  { label: "24h", ms: 24 * 60 * 60 * 1000 },
+];
+
+function formatTimeRemaining(delayUntil: string): string | null {
+  const remaining = new Date(delayUntil).getTime() - Date.now();
+  if (remaining <= 0) return null;
+  const hours = Math.floor(remaining / (60 * 60 * 1000));
+  const minutes = Math.ceil((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  return "Just now";
+}
 
 function getDenominationLabel(denomination?: number | null): string {
   if (!denomination) return "Custom";
@@ -46,29 +71,43 @@ function computeExchangeRate(
   return rate < 0.01 ? rate.toExponential(2) : rate.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
-export default function PrivateSwapPage() {
+function PrivateSwapContent() {
+  const searchParams = useSearchParams();
   const { connected, publicKey } = useWallet();
   const { positions: storePositions } = usePositionsStore();
   const {
     status, error, quote, unshieldSignature, swapSignature,
     proofProgress, proofStage, fetchQuote, swap, reset, isDevnet,
   } = usePrivateSwap();
-  const { fire: fireConfetti } = useConfetti();
 
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedToken, setSelectedToken] = useState<FeaturedToken | null>(null);
   const [recipientAddress, setRecipientAddress] = useState<string>("");
+  const [delayMs, setDelayMs] = useState<number>(0);
+  const [preselectedFromUrl, setPreselectedFromUrl] = useState(false);
 
-  // Auto-fill recipient only once when wallet connects
-  const didAutoFill = useRef(false);
+  // Ref for scrolling to token selection
+  const tokenSectionRef = useRef<HTMLDivElement>(null);
+
+  const shieldedPositions = storePositions
+    .filter((p) => p.status === "shielded")
+    .sort((a, b) => b.timestamp - a.timestamp); // Most recent first
+
+  // Handle position pre-selection from URL (when coming from withdraw page)
   useEffect(() => {
-    if (publicKey && !didAutoFill.current) {
-      setRecipientAddress(publicKey);
-      didAutoFill.current = true;
+    const positionId = searchParams.get("position");
+    if (positionId && shieldedPositions.length > 0 && !selectedPosition) {
+      const position = shieldedPositions.find((p) => p.id === positionId);
+      if (position) {
+        setSelectedPosition(position);
+        setPreselectedFromUrl(true);
+        // Scroll to token selection after a brief delay for animation
+        setTimeout(() => {
+          tokenSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 300);
+      }
     }
-  }, [publicKey]);
-
-  const shieldedPositions = storePositions.filter((p) => p.status === "shielded");
+  }, [searchParams, shieldedPositions, selectedPosition]);
 
   const isLoading =
     status === "quoting" ||
@@ -102,12 +141,11 @@ export default function PrivateSwapPage() {
   // Handle success/error
   useEffect(() => {
     if (status === "success") {
-      fireConfetti();
       toast.success("Private swap complete!");
     } else if (status === "error" && error) {
       toast.error("Private swap failed", { description: error });
     }
-  }, [status, error, fireConfetti]);
+  }, [status, error]);
 
   const handleSwap = async () => {
     if (!selectedPosition || !selectedToken || !recipientAddress.trim()) return;
@@ -278,7 +316,9 @@ export default function PrivateSwapPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              <SectionHeader>Select Position</SectionHeader>
+              <SectionHeader>
+                {preselectedFromUrl && selectedPosition ? "Selected Position" : "Select Position"}
+              </SectionHeader>
             </motion.div>
 
             {shieldedPositions.length === 0 ? (
@@ -297,56 +337,93 @@ export default function PrivateSwapPage() {
                   <Button>./shield --go</Button>
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-[10px] mb-[25px]">
-                {shieldedPositions.map((position, index) => (
-                  <motion.button
-                    key={position.id}
-                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 + index * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                    onClick={() => handleSelectPosition(position)}
-                    disabled={isLoading}
-                    className={cn(
-                      "w-full flex items-center justify-between p-[18px] px-5 rounded-lg border transition-all",
-                      "bg-[rgba(0,0,0,0.3)] hover:border-terminal-dark",
-                      selectedPosition?.id === position.id
-                        ? "border-terminal-green bg-[rgba(0,160,136,0.08)]"
-                        : "border-border",
-                      isLoading && "opacity-50 cursor-not-allowed"
-                    )}
+            ) : preselectedFromUrl && selectedPosition ? (
+              /* Compact view when pre-selected from withdraw page */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="bg-terminal-green/15 border border-terminal-green/40 rounded-xl p-4 mb-[25px]"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-terminal-green/20 flex items-center justify-center">
+                      <span className="text-terminal-green">✓</span>
+                    </div>
+                    <div>
+                      <div className="font-mono text-terminal-green text-lg">
+                        {formatSOL(selectedPosition.shieldedAmount)} SOL
+                      </div>
+                      <div className="text-xs text-text-dim font-mono">
+                        {getDenominationLabel(selectedPosition.denomination)}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPreselectedFromUrl(false)}
+                    className="text-xs text-text-dim hover:text-white transition-colors"
                   >
-                    <div className="flex items-center gap-[15px]">
-                      <div className="w-10 h-10 rounded-full bg-terminal-dark flex items-center justify-center">
-                        <span className="text-sm font-semibold text-terminal-green">
-                          {position.token === "SOL" ? "\u25CE" : position.token.charAt(0)}
+                    Change
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto mb-[25px]">
+                {shieldedPositions.map((position, index) => {
+                  const timeLeft = position.delayUntil
+                    ? formatTimeRemaining(position.delayUntil)
+                    : null;
+                  const isLocked = !!timeLeft;
+                  const isSelected = selectedPosition?.id === position.id;
+
+                  return (
+                    <motion.button
+                      key={position.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+                      onClick={() => !isLocked && handleSelectPosition(position)}
+                      disabled={isLoading || isLocked}
+                      className={cn(
+                        "w-full flex items-center justify-between py-3.5 px-4 transition-all text-left",
+                        index !== 0 && "border-t border-border/50",
+                        isSelected
+                          ? "bg-terminal-green/15 border-l-2 border-l-terminal-green"
+                          : "border-l-2 border-l-transparent",
+                        isLocked
+                          ? "bg-yellow-500/5 cursor-not-allowed"
+                          : !isSelected && "hover:bg-white/[0.02]",
+                        isLoading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "font-mono text-sm w-24 text-left",
+                          isLocked ? "text-yellow-400" : "text-terminal-green"
+                        )}>
+                          {formatSOL(position.shieldedAmount)} SOL
                         </span>
-                      </div>
-                      <div className="text-left">
-                        <div className="flex items-center gap-[10px]">
-                          <span className="font-heading font-semibold text-white text-[15px]">{position.token}</span>
-                          <span className="text-xs font-medium text-terminal-green bg-terminal-green/20 px-2 py-0.5 rounded">
-                            {getDenominationLabel(position.denomination)}
+                        <span className="text-xs text-text-dim font-mono">
+                          {getDenominationLabel(position.denomination)}
+                        </span>
+                        {isLocked && (
+                          <span className="text-xs text-yellow-400">
+                            ({timeLeft})
                           </span>
-                        </div>
-                        <div className="text-xs text-text-dim mt-1">
-                          Shielded {new Date(position.timestamp).toLocaleDateString()}
-                        </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-heading font-medium text-white text-base">
-                        {formatSOL(position.shieldedAmount)} {position.token}
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
+                      <span className="text-xs text-text-dim">
+                        {formatRelativeTime(position.timestamp)}
+                      </span>
+                    </motion.button>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Output Token Selection */}
-          <div className="space-y-4 relative z-20">
+          <div ref={tokenSectionRef} className="space-y-4 relative z-20">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -387,7 +464,7 @@ export default function PrivateSwapPage() {
                 onChange={(e) => setRecipientAddress(e.target.value)}
                 placeholder="Enter Solana address"
                 disabled={isLoading}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-border rounded-xl px-4 py-3.5 text-white font-mono text-sm focus:outline-none focus:border-terminal-green transition-colors disabled:opacity-50"
+                className="w-full bg-[rgba(0,0,0,0.4)] border border-terminal-green rounded-xl px-4 py-3.5 text-white font-mono text-sm focus:outline-none transition-colors disabled:opacity-50"
               />
               <p className="text-xs text-text-dim mt-3">
                 {isDevnet
@@ -396,6 +473,39 @@ export default function PrivateSwapPage() {
               </p>
             </motion.div>
           </div>
+
+          {/* Privacy Delay Section */}
+          {selectedPosition && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="space-y-4"
+            >
+              <SectionHeader>Privacy Delay</SectionHeader>
+              <div className="flex gap-2">
+                {DELAY_PRESETS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setDelayMs(preset.ms)}
+                    disabled={isLoading}
+                    className={cn(
+                      "flex-1 py-3 rounded-lg font-mono text-sm transition-all",
+                      delayMs === preset.ms
+                        ? "bg-terminal-green text-bg"
+                        : "bg-bg-card border border-border text-text-dim hover:border-terminal-dark"
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-text-dim">
+                Adding a delay makes it harder to correlate your deposit and withdrawal timing.
+              </p>
+            </motion.div>
+          )}
 
           {/* Quote Display */}
           {quote && selectedToken && (
@@ -498,5 +608,13 @@ export default function PrivateSwapPage() {
       </Card>
       </motion.div>
     </div>
+  );
+}
+
+export default function PrivateSwapPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="text-text-dim">Loading...</div></div>}>
+      <PrivateSwapContent />
+    </Suspense>
   );
 }

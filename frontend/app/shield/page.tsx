@@ -8,10 +8,10 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ProofAnimation } from "@/components/proof/ProofAnimation";
 import { useWallet } from "@/hooks/useWallet";
 import { useShield } from "@/hooks/useShield";
 import { usePools } from "@/hooks/usePools";
-import { useConfetti } from "@/hooks/useConfetti";
 import { cn, formatAmount } from "@/lib/utils";
 import { SUPPORTED_TOKENS, LAMPORTS_PER_SOL, FIXED_DENOMINATIONS, CUSTOM_AMOUNT_WARNING, type SupportedToken } from "@/lib/constants";
 import type { PoolInfo } from "@/types/api";
@@ -28,7 +28,6 @@ export default function ShieldPage() {
   const { connected, balance } = useWallet();
   const { status, error, txSignature, shield, reset } = useShield();
   const { pools } = usePools();
-  const { fire: fireConfetti } = useConfetti();
 
   const [selectedToken, setSelectedToken] = useState<SupportedToken>(SUPPORTED_TOKENS[0]);
   const [mode, setMode] = useState<"fixed" | "custom">("fixed");
@@ -37,6 +36,18 @@ export default function ShieldPage() {
 
   const isLoading = status === "preparing" || status === "signing" || status === "confirming" || status === "deriving";
 
+  // Map shield status to progress for animation
+  const getShieldProgress = (): { progress: number; stage: string | null } => {
+    switch (status) {
+      case "deriving": return { progress: 20, stage: "Deriving secret" };
+      case "preparing": return { progress: 45, stage: "Preparing transaction" };
+      case "signing": return { progress: 70, stage: "Waiting for signature" };
+      case "confirming": return { progress: 90, stage: "Confirming on chain" };
+      default: return { progress: 0, stage: null };
+    }
+  };
+  const { progress: shieldProgress, stage: shieldStage } = getShieldProgress();
+
   const effectiveAmount =
     mode === "fixed" && denomination
       ? denomination / LAMPORTS_PER_SOL
@@ -44,7 +55,6 @@ export default function ShieldPage() {
 
   useEffect(() => {
     if (status === "success") {
-      fireConfetti();
       toast.success("Assets shielded successfully!", {
         description: `Transaction: ${txSignature?.slice(0, 8)}...`,
       });
@@ -56,7 +66,7 @@ export default function ShieldPage() {
         description: error,
       });
     }
-  }, [status, error, txSignature, reset, router, fireConfetti]);
+  }, [status, error, txSignature, reset, router]);
 
   const handleShield = async () => {
     if (!connected) {
@@ -248,8 +258,14 @@ export default function ShieldPage() {
                 </svg>
                 Fixed Pools
                 {mode === "fixed" && (
-                  <span className="text-[10px] bg-bg/30 px-1.5 py-0.5 rounded">
+                  <span className="group relative text-[10px] bg-bg/40 border border-bg/60 px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
                     Best Privacy
+                    <svg className="w-3 h-3 opacity-70" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-bg border border-terminal-green/30 rounded-lg text-[10px] text-text-dim leading-relaxed opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
+                      Fixed amounts mix your deposit with others who deposited the same amount, making it impossible to trace.
+                    </span>
                   </span>
                 )}
               </button>
@@ -404,6 +420,11 @@ export default function ShieldPage() {
               >
                 Insufficient balance for this pool
               </motion.div>
+            )}
+
+            {/* Transaction Animation */}
+            {isLoading && (
+              <ProofAnimation progress={shieldProgress} stage={shieldStage} />
             )}
 
             {/* Submit Button */}
