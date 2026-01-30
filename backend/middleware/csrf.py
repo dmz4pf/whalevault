@@ -56,41 +56,31 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Validate origin
         if origin:
             if origin not in self.allowed_origins:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": {
-                            "code": "CSRF_VALIDATION_FAILED",
-                            "message": "Cross-site request blocked",
-                            "details": {"reason": "origin_mismatch"},
-                        }
-                    },
-                )
+                return self._cors_error_response(origin, "origin_mismatch")
         elif referer_origin:
             if referer_origin not in self.allowed_origins:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": {
-                            "code": "CSRF_VALIDATION_FAILED",
-                            "message": "Cross-site request blocked",
-                            "details": {"reason": "referer_mismatch"},
-                        }
-                    },
-                )
+                return self._cors_error_response(referer_origin, "referer_mismatch")
         else:
             # No Origin or Referer header - reject for safety
-            # This can happen with curl/Postman but shouldn't happen from browsers
-            # In production, you might want to log this and allow in debug mode
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "error": {
-                        "code": "CSRF_VALIDATION_FAILED",
-                        "message": "Cross-site request blocked",
-                        "details": {"reason": "missing_origin"},
-                    }
-                },
-            )
+            return self._cors_error_response("", "missing_origin")
 
+        # Origin is valid, continue to next middleware
         return await call_next(request)
+
+    def _cors_error_response(self, origin: str, reason: str) -> JSONResponse:
+        """Return CSRF error with CORS headers to prevent browser CORS errors."""
+        response = JSONResponse(
+            status_code=403,
+            content={
+                "error": {
+                    "code": "CSRF_VALIDATION_FAILED",
+                    "message": "Cross-site request blocked",
+                    "details": {"reason": reason},
+                }
+            },
+        )
+        # Add CORS headers so browser can read the error
+        if origin and origin in self.allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
