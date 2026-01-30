@@ -65,7 +65,7 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-[50px]">
           <div className="flex items-center justify-between h-[72px]">
             {/* Logo - lowercase with blinking cursor */}
-            <Link href="/" className="flex items-center">
+            <Link href="/landing" className="flex items-center">
               <span className="animate-cursor-blink text-terminal-green mr-2" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
               <span
                 className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"

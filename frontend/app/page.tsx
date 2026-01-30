@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { BinaryRain, HexStream } from "@/components/effects";
 import Link from "next/link";
 
@@ -33,7 +34,10 @@ export default function SplashPage() {
       {/* Main Content */}
       <div className="relative h-full flex flex-col" style={{ zIndex: 10 }}>
         {/* Navigation */}
-        <nav
+        <motion.nav
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="px-12 md:px-16 py-6 flex justify-between items-center border-b"
           style={{
             background: "rgba(5, 5, 8, 0.7)",
@@ -53,27 +57,38 @@ export default function SplashPage() {
           </div>
 
           <div className="hidden md:flex gap-10">
-            {["shield", "withdraw", "swap", "history", "docs"].map((link) => (
-              <Link
+            {["shield", "withdraw", "swap", "history", "docs"].map((link, i) => (
+              <motion.div
                 key={link}
-                href={link === "docs" ? "https://docs.whalevault.io" : `/${link}`}
-                className="text-white text-[13px] tracking-wider transition-all duration-300 relative group"
-                target={link === "docs" ? "_blank" : undefined}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
               >
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-terminal-dark">
-                  ./
-                </span>
-                <span className="group-hover:text-terminal-green group-hover:drop-shadow-[0_0_10px_var(--terminal-green)] transition-all duration-300">
-                  {link}
-                </span>
-              </Link>
+                <Link
+                  href={link === "docs" ? "https://docs.whalevault.io" : `/${link}`}
+                  className="text-white text-[13px] tracking-wider transition-all duration-300 relative group"
+                  target={link === "docs" ? "_blank" : undefined}
+                >
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-terminal-dark">
+                    ./
+                  </span>
+                  <span className="group-hover:text-terminal-green group-hover:drop-shadow-[0_0_10px_var(--terminal-green)] transition-all duration-300">
+                    {link}
+                  </span>
+                </Link>
+              </motion.div>
             ))}
           </div>
-        </nav>
+        </motion.nav>
 
-        {/* Main CTA Section */}
+        {/* Main CTA Section - scaled down */}
         <section className="flex-1 flex flex-col items-center justify-center text-center px-8 md:px-16">
-          <h1 className="font-heading font-normal text-5xl md:text-6xl lg:text-7xl mb-6">
+          <motion.h1
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="font-heading font-normal text-3xl md:text-4xl lg:text-5xl mb-5"
+          >
             Initialize{" "}
             <span
               className="text-terminal-green"
@@ -83,34 +98,48 @@ export default function SplashPage() {
             >
               privacy
             </span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-text-dim text-lg md:text-xl tracking-wider mb-12">
-            Your financial sovereignty awaits.
-          </p>
-
-          <Link
-            href="/landing"
-            className="font-mono bg-transparent border border-terminal-green text-terminal-green px-12 py-5 text-base md:text-lg cursor-pointer transition-all duration-300 inline-block hover:bg-terminal-green hover:text-[#050508]"
-            style={{
-              textShadow: "0 0 8px var(--terminal-green)",
-              boxShadow: "0 0 25px rgba(0, 160, 136, 0.15)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.textShadow = "none";
-              e.currentTarget.style.boxShadow = "0 0 50px rgba(0, 160, 136, 0.4)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.textShadow = "0 0 8px var(--terminal-green)";
-              e.currentTarget.style.boxShadow = "0 0 25px rgba(0, 160, 136, 0.15)";
-            }}
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="text-text-dim text-base md:text-lg tracking-wider mb-10"
           >
-            ./launch-app
-          </Link>
+            Your financial sovereignty awaits.
+          </motion.p>
+
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Link
+              href="/landing"
+              className="font-mono bg-transparent border border-terminal-green text-terminal-green px-10 py-4 text-sm md:text-base cursor-pointer transition-all duration-300 inline-block hover:bg-terminal-green hover:text-[#050508]"
+              style={{
+                textShadow: "0 0 8px var(--terminal-green)",
+                boxShadow: "0 0 25px rgba(0, 160, 136, 0.15)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.textShadow = "none";
+                e.currentTarget.style.boxShadow = "0 0 50px rgba(0, 160, 136, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.textShadow = "0 0 8px var(--terminal-green)";
+                e.currentTarget.style.boxShadow = "0 0 25px rgba(0, 160, 136, 0.15)";
+              }}
+            >
+              ./launch-app
+            </Link>
+          </motion.div>
         </section>
 
         {/* Footer */}
-        <footer
+        <motion.footer
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="px-12 md:px-16 py-8 border-t flex flex-col md:flex-row justify-between items-center gap-6"
           style={{
             background: "rgba(5, 5, 8, 0.5)",
@@ -144,7 +173,7 @@ export default function SplashPage() {
               </a>
             ))}
           </div>
-        </footer>
+        </motion.footer>
       </div>
 
       <style jsx>{`

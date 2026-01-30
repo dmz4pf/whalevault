@@ -147,30 +147,24 @@ export default function LandingPage() {
 
               {/* Terminal Body */}
               <div className="p-6">
-                <TerminalTyping />
+                <TerminalTyping connected={connected} />
 
-                {/* Terminal Actions */}
-                <div className="flex items-center gap-3 mt-6 pt-5 border-t border-dashed border-border">
-                  <span className="text-terminal-green">$</span>
-                  {connected ? (
-                    <Link href="/dashboard">
-                      <button className="font-mono bg-transparent border border-terminal-green text-terminal-green px-5 py-2.5 text-xs cursor-pointer transition-all hover:bg-terminal-green hover:text-bg tracking-wide" style={{ textShadow: "0 0 5px #00a088" }}>
-                        ./go-to-dashboard
-                      </button>
-                    </Link>
-                  ) : (
+                {/* Terminal Actions - only show when not connected */}
+                {!connected && (
+                  <div className="flex items-center gap-3 mt-6 pt-5 border-t border-dashed border-border">
+                    <span className="text-terminal-green">$</span>
                     <Link href="/shield">
                       <button className="font-mono bg-transparent border border-terminal-green text-terminal-green px-5 py-2.5 text-xs cursor-pointer transition-all hover:bg-terminal-green hover:text-bg tracking-wide" style={{ textShadow: "0 0 5px #00a088" }}>
                         ./connect-wallet
                       </button>
                     </Link>
-                  )}
-                  <Link href="https://docs.whalevault.io" target="_blank">
-                    <button className="font-mono bg-transparent border border-border text-text-dim px-5 py-2.5 text-xs cursor-pointer transition-all hover:border-text-muted hover:text-text tracking-wide">
-                      ./read-docs
-                    </button>
-                  </Link>
-                </div>
+                    <Link href="https://docs.whalevault.io" target="_blank">
+                      <button className="font-mono bg-transparent border border-border text-text-dim px-5 py-2.5 text-xs cursor-pointer transition-all hover:border-text-muted hover:text-text tracking-wide">
+                        ./read-docs
+                      </button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

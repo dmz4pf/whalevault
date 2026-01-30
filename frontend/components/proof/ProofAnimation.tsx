@@ -12,10 +12,10 @@ export function ProofAnimation({ progress, stage }: ProofAnimationProps) {
   const circumference = 2 * Math.PI * 56;
 
   return (
-    <div className="relative w-full h-48 rounded-xl bg-gradient-to-br from-terminal-green/10 to-terminal-dark/10 border border-border overflow-hidden">
+    <div className="relative w-full h-56 rounded-xl bg-gradient-to-br from-terminal-green/10 to-terminal-dark/10 border border-border overflow-hidden flex items-center justify-center">
       {/* Central orb glow */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute"
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.5, 1, 0.5],
@@ -31,7 +31,7 @@ export function ProofAnimation({ progress, stage }: ProofAnimationProps) {
 
       {/* Inner rotating ring */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute"
         animate={{ rotate: 360 }}
         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
       >
@@ -44,7 +44,7 @@ export function ProofAnimation({ progress, stage }: ProofAnimationProps) {
         return (
           <motion.div
             key={i}
-            className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-terminal-green"
+            className="absolute w-2 h-2 rounded-full bg-terminal-green"
             initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
             animate={{
               x: Math.cos(angle) * 60,
@@ -62,7 +62,7 @@ export function ProofAnimation({ progress, stage }: ProofAnimationProps) {
       })}
 
       {/* Progress ring */}
-      <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32">
+      <svg className="absolute w-32 h-32">
         <circle
           cx="64"
           cy="64"
@@ -93,11 +93,11 @@ export function ProofAnimation({ progress, stage }: ProofAnimationProps) {
         </defs>
       </svg>
 
-      {/* Text overlay */}
-      <div className="absolute bottom-4 left-0 right-0 text-center">
+      {/* Text overlay - centered */}
+      <div className="absolute text-center">
         <div className="text-2xl font-bold text-white">{progress}%</div>
         {stage && (
-          <div className="text-sm text-text-dim capitalize">
+          <div className="text-sm text-text-dim capitalize mt-1">
             {stage.replace(/_/g, " ")}
           </div>
         )}

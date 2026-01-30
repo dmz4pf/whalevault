@@ -16,7 +16,11 @@ const terminalContent: TerminalLine[] = [
   { type: "highlight", text: "Ready for private transactions" },
 ];
 
-export function TerminalTyping() {
+interface TerminalTypingProps {
+  connected?: boolean;
+}
+
+export function TerminalTyping({ connected = false }: TerminalTypingProps) {
   const [displayedLines, setDisplayedLines] = useState<{text: string; type: string; complete: boolean}[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const animationStarted = useRef(false);
@@ -91,6 +95,16 @@ export function TerminalTyping() {
           )}
         </div>
       ))}
+      {/* Wallet connected status */}
+      {isComplete && connected && (
+        <div className="mt-4">
+          <span className="text-terminal-green">$</span>
+          <span className="text-text ml-2">wallet </span>
+          <span className="text-terminal-green" style={{ textShadow: "0 0 10px #00a088" }}>
+            connected
+          </span>
+        </div>
+      )}
       {/* Blinking cursor */}
       <span
         className="inline-block w-2 h-4 bg-terminal-green ml-1 align-middle animate-cursor-blink"
