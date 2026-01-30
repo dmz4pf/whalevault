@@ -3,19 +3,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SOLANA_NETWORK } from "@/lib/constants";
 import { getFeaturedTokens, SOL_MINT } from "@/lib/tokens";
-import { getSwapTokens } from "@/lib/api";
+import { getSwapTokens, getSwapTokensDevnet } from "@/lib/api";
 import type { FeaturedToken } from "@/lib/tokens";
 
-const RAYDIUM_DEVNET_API = "https://api-v3-devnet.raydium.io";
 const DEBOUNCE_MS = 300;
 
-interface RaydiumPoolToken {
-  address: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  logoURI: string;
-}
+// Module-level cache to persist tokens across component mounts
+let cachedTokens: FeaturedToken[] | null = null;
+let fetchPromise: Promise<FeaturedToken[]> | null = null;
 
 interface UseTokenListReturn {
   tokens: FeaturedToken[];
@@ -34,68 +29,57 @@ interface UseTokenListReturn {
  */
 export function useTokenList(): UseTokenListReturn {
   const featured = useMemo(() => getFeaturedTokens(SOLANA_NETWORK), []);
-  const [allTokens, setAllTokens] = useState<FeaturedToken[]>(featured);
-  const [loading, setLoading] = useState(false);
+  const [allTokens, setAllTokens] = useState<FeaturedToken[]>(cachedTokens ?? featured);
+  const [loading, setLoading] = useState(!cachedTokens);
   const [searchQuery, setSearchQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Load full token list on mount
+  // Load full token list on mount (with caching)
   useEffect(() => {
+    // If we already have cached tokens, use them immediately
+    if (cachedTokens) {
+      setAllTokens(cachedTokens);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadTokens() {
       setLoading(true);
       try {
-        if (SOLANA_NETWORK === "devnet") {
-          // Fetch tokens that have SOL pools on devnet
-          const res = await fetch(
-            `${RAYDIUM_DEVNET_API}/pools/info/mint?mint1=${SOL_MINT}&poolType=all&poolSortField=liquidity&sortType=desc&pageSize=50&page=1`
-          );
-          const data = await res.json();
-          const pools = data?.data?.data ?? [];
+        // Reuse existing fetch promise if one is in progress
+        if (!fetchPromise) {
+          fetchPromise = (async () => {
+            const apiTokens = SOLANA_NETWORK === "devnet"
+              ? await getSwapTokensDevnet()
+              : await getSwapTokens();
 
-          const seen = new Set<string>();
-          const tokens: FeaturedToken[] = [];
-
-          for (const pool of pools) {
-            const other: RaydiumPoolToken =
-              pool.mintA.address === SOL_MINT ? pool.mintB : pool.mintA;
-
-            if (seen.has(other.address) || other.address === SOL_MINT) continue;
-            if (!other.symbol) continue;
-            seen.add(other.address);
-
-            tokens.push({
-              symbol: other.symbol,
-              name: other.name,
-              mint: other.address,
-              decimals: other.decimals,
-              logoUri: other.logoURI || undefined,
-            });
-          }
-
-          if (!cancelled) setAllTokens(tokens.length > 0 ? tokens : featured);
-        } else {
-          // Mainnet: use backend token list
-          const tokens = await getSwapTokens();
-          if (!cancelled) {
-            setAllTokens(
-              tokens
-                .filter((t) => t.address !== SOL_MINT)
-                .map((t) => ({
-                  symbol: t.symbol,
-                  name: t.name,
-                  mint: t.address,
-                  decimals: t.decimals,
-                  logoUri: t.logoUri ?? undefined,
-                }))
-            );
-          }
+            return apiTokens
+              .filter((t) => t.address !== SOL_MINT)
+              .map((t) => ({
+                symbol: t.symbol,
+                name: t.name,
+                mint: t.address,
+                decimals: t.decimals,
+                logoUri: t.logoUri ?? undefined,
+              }));
+          })();
         }
-      } catch {
-        // Fall back to featured tokens on error
+
+        const tokens = await fetchPromise;
+
+        // Cache the result
+        if (tokens.length > 0) {
+          cachedTokens = tokens;
+        }
+
+        if (!cancelled) setAllTokens(tokens.length > 0 ? tokens : featured);
+      } catch (err) {
+        console.error("[useTokenList] Failed to fetch tokens:", err);
         if (!cancelled) setAllTokens(featured);
       } finally {
+        fetchPromise = null;
         if (!cancelled) setLoading(false);
       }
     }

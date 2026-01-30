@@ -251,10 +251,17 @@ export async function executeSwapDevnet(
 }
 
 /**
- * Get list of supported swap tokens
+ * Get list of supported swap tokens (mainnet via Jupiter)
  */
 export async function getSwapTokens(): Promise<SwapTokenInfo[]> {
   return fetchApi<SwapTokenInfo[]>("/swap/tokens");
+}
+
+/**
+ * Get list of supported swap tokens for devnet (via Raydium)
+ */
+export async function getSwapTokensDevnet(): Promise<SwapTokenInfo[]> {
+  return fetchApi<SwapTokenInfo[]>("/swap/tokens-devnet");
 }
 
 // ---------------------------------------------------------------------------
