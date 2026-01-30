@@ -16,16 +16,19 @@ const MOCK_POOLS: PoolInfo[] = [
 ];
 
 export function usePools() {
-  const [pools, setPools] = useState<PoolInfo[]>(USE_MOCK_POOLS ? MOCK_POOLS : []);
+  const [pools, setPools] = useState<PoolInfo[]>(MOCK_POOLS);
   const [loading, setLoading] = useState(!USE_MOCK_POOLS);
 
   const refresh = useCallback(async () => {
     if (USE_MOCK_POOLS) return;
     try {
       const data = await fetchPools();
-      setPools(data.pools);
+      // Use API data if available, otherwise keep mock data
+      if (data.pools && data.pools.length > 0) {
+        setPools(data.pools);
+      }
     } catch {
-      console.warn("[Pools] Failed to fetch pool data");
+      console.warn("[Pools] Failed to fetch pool data, using mock data");
     } finally {
       setLoading(false);
     }
