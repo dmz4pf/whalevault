@@ -47,7 +47,7 @@ const ACTION_OPTIONS = [
     id: "send" as const,
     icon: "\u2192",
     title: "Send Privately",
-    description: "To a stealth address",
+    description: "To another wallet",
     recommended: true,
     warning: false,
   },
@@ -111,12 +111,12 @@ export default function UnshieldPage() {
   // Handle success/error
   useEffect(() => {
     if (status === "success") {
-      toast.success("Stealth withdrawal complete!");
+      toast.success("Withdrawal complete!");
       setSelectedPosition(null);
       reset();
       setTimeout(() => router.push("/dashboard"), 1500);
     } else if (status === "error" && error) {
-      toast.error("Stealth withdrawal failed", { description: error });
+      toast.error("Withdrawal failed", { description: error });
     }
   }, [status, error, reset, router]);
 
@@ -149,7 +149,7 @@ export default function UnshieldPage() {
       case "confirming":
         return "Confirming on chain...";
       default:
-        return "./stealth-withdraw";
+        return "./unshield";
     }
   };
 
@@ -200,7 +200,7 @@ export default function UnshieldPage() {
     <div className="max-w-[900px] mx-auto px-6 md:px-10 lg:px-[50px] space-y-8">
       {/* Page Header */}
       <PageHeader
-        title="Stealth Withdraw"
+        title="Unshield"
         subtitle="Convert your shielded positions back to regular, public tokens."
       />
 
@@ -439,19 +439,6 @@ export default function UnshieldPage() {
                         disabled={isLoading}
                         className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Generate stealth address placeholder
-                          const stealth =
-                            "stealth_" + Math.random().toString(36).slice(2, 10);
-                          setRecipientAddress(stealth);
-                        }}
-                        disabled={isLoading}
-                        className="w-full py-3 rounded-xl bg-terminal-green/20 border border-terminal-green/40 text-terminal-green font-mono text-sm hover:bg-terminal-green/30 transition-all disabled:opacity-50"
-                      >
-                        Generate Stealth Address
-                      </button>
                       <p className="text-xs text-text-dim">
                         For maximum privacy, use a fresh wallet address that has
                         never been linked to your main wallet.
@@ -557,7 +544,7 @@ export default function UnshieldPage() {
               isOpen={isLoading}
               progress={proofProgress}
               stage={proofStage}
-              title="Stealth Withdraw"
+              title="Unshielding"
               subtitle={selectedPosition ? `${formatSOL(selectedPosition.shieldedAmount)} SOL` : undefined}
             />
 
