@@ -41,8 +41,7 @@ export function BinaryRain({ opacity = 0.05, className = "" }: BinaryRainProps) 
     initDrops();
 
     const draw = () => {
-      ctx.fillStyle = "rgba(13, 17, 23, 0.05)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
 
