@@ -36,16 +36,19 @@ export function useWallet() {
 
   useEffect(() => {
     if (!publicKey || !connection) {
+      console.log("[Wallet] Missing:", { publicKey: !!publicKey, connection: !!connection });
       setBalance(0);
       return;
     }
 
     const fetchBalance = async () => {
       try {
+        console.log("[Wallet] Fetching balance for:", publicKey.toBase58());
         const lamports = await connection.getBalance(publicKey);
+        console.log("[Wallet] Balance:", lamports / LAMPORTS_PER_SOL, "SOL");
         setBalance(lamports / LAMPORTS_PER_SOL);
       } catch (error) {
-        console.error("Failed to fetch balance:", error);
+        console.error("[Wallet] Failed to fetch balance:", error);
         setBalance(0);
       }
     };
