@@ -5,17 +5,32 @@
 # Using nightly for edition2024 support (required by time crate v0.3.46)
 FROM rustlang/rust:nightly-bookworm-slim as rust-builder
 
-# Install build dependencies
+# Install build dependencies + Python 3.12
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-dev \
+    wget \
+    build-essential \
     libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncurses5-dev \
+    libffi-dev \
+    liblzma-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python 3.12 from source
+RUN wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz \
+    && tar -xzf Python-3.12.0.tgz \
+    && cd Python-3.12.0 \
+    && ./configure --enable-optimizations \
+    && make -j$(nproc) \
+    && make install \
+    && cd .. && rm -rf Python-3.12.0 Python-3.12.0.tgz
+
 # Install maturin for building Rust Python extensions
-RUN pip3 install maturin --break-system-packages
+RUN pip3 install maturin
 
 # Copy veil SDK source
 WORKDIR /build
@@ -25,8 +40,8 @@ COPY veil /build/veil
 WORKDIR /build/veil
 RUN maturin build --release --strip -o /build/wheels
 
-# Stage 2: Python runtime (3.11 to match wheel built in stage 1)
-FROM python:3.11-slim-bookworm
+# Stage 2: Python runtime
+FROM python:3.12-slim-bookworm
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
