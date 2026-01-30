@@ -29,7 +29,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "http://localhost:8000/api",
+    "NEXT_PUBLIC_API_URL": "https://whalevault-production.up.railway.app/api",
     "NEXT_PUBLIC_SOLANA_NETWORK": "devnet",
     "NEXT_PUBLIC_SOLANA_RPC_URL": "https://api.devnet.solana.com",
     "NEXT_PUBLIC_SUPABASE_URL": "https://spxwryqmcdwkkskgnups.supabase.co",
