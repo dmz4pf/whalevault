@@ -2,7 +2,8 @@
 # Multi-stage build for Python + Rust (Veil SDK)
 
 # Stage 1: Build Rust extensions
-FROM rust:1.83-slim-bookworm as rust-builder
+# Using nightly for edition2024 support (required by time crate v0.3.46)
+FROM rustlang/rust:nightly-bookworm-slim as rust-builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
