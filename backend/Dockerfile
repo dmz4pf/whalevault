@@ -25,8 +25,8 @@ COPY veil /build/veil
 WORKDIR /build/veil
 RUN maturin build --release --strip -o /build/wheels
 
-# Stage 2: Python runtime
-FROM python:3.12-slim-bookworm
+# Stage 2: Python runtime (3.11 to match wheel built in stage 1)
+FROM python:3.11-slim-bookworm
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
