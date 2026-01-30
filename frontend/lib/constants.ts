@@ -50,7 +50,7 @@ export const API_BASE_URL =
 
 export const SOLANA_NETWORK: NetworkType = "devnet";
 
-export const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+export const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://devnet.helius-rpc.com/?api-key=37b10f99-d36d-4796-8718-b47f0742c390";
 
 export interface SupportedToken {
   symbol: string;
