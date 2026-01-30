@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ProofAnimation } from "@/components/proof/ProofAnimation";
+import { TransactionModal } from "@/components/transaction";
 import { TokenSelector } from "@/components/swap/TokenSelector";
 import { useWallet } from "@/hooks/useWallet";
 import { usePrivateSwap } from "@/hooks/usePrivateSwap";
@@ -562,15 +562,14 @@ function PrivateSwapContent() {
             </motion.div>
           )}
 
-          {/* ZK Proof Animation */}
-          {status === "generating" && (
-            <ProofAnimation progress={proofProgress} stage={proofStage} />
-          )}
-
-          {/* Progress Status */}
-          {isLoading && status !== "generating" && proofStage && (
-            <div className="text-center text-sm text-text-dim font-mono">{proofStage}</div>
-          )}
+          {/* Transaction Modal - Fullscreen with blur */}
+          <TransactionModal
+            isOpen={isLoading}
+            progress={proofProgress}
+            stage={proofStage || status}
+            title="Private Swap"
+            subtitle={selectedPosition && selectedToken ? `${formatSOL(selectedPosition.shieldedAmount)} SOL → ${selectedToken.symbol}` : undefined}
+          />
 
           {/* Info Box */}
           <motion.div

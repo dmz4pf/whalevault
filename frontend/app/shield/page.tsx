@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ProofAnimation } from "@/components/proof/ProofAnimation";
+import { TransactionModal } from "@/components/transaction";
 import { useWallet } from "@/hooks/useWallet";
 import { useShield } from "@/hooks/useShield";
 import { usePools } from "@/hooks/usePools";
@@ -422,10 +422,14 @@ export default function ShieldPage() {
               </motion.div>
             )}
 
-            {/* Transaction Animation */}
-            {isLoading && (
-              <ProofAnimation progress={shieldProgress} stage={shieldStage} />
-            )}
+            {/* Transaction Modal - Fullscreen with blur */}
+            <TransactionModal
+              isOpen={isLoading}
+              progress={shieldProgress}
+              stage={shieldStage}
+              title="Shielding Assets"
+              subtitle={`${effectiveAmount} ${selectedToken.symbol}`}
+            />
 
             {/* Submit Button */}
             <motion.div

@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ProofAnimation } from "@/components/proof/ProofAnimation";
+import { TransactionModal } from "@/components/transaction";
 import { useWallet } from "@/hooks/useWallet";
 import { useUnshield } from "@/hooks/useUnshield";
 import { usePositionsStore } from "@/stores/positions";
@@ -552,10 +552,14 @@ export default function UnshieldPage() {
               </motion.div>
             )}
 
-            {/* ZK Proof Animation */}
-            {isLoading && (
-              <ProofAnimation progress={proofProgress} stage={proofStage} />
-            )}
+            {/* Transaction Modal - Fullscreen with blur */}
+            <TransactionModal
+              isOpen={isLoading}
+              progress={proofProgress}
+              stage={proofStage}
+              title="Stealth Withdraw"
+              subtitle={selectedPosition ? `${formatSOL(selectedPosition.shieldedAmount)} SOL` : undefined}
+            />
 
             {/* Submit Button */}
             <motion.div
