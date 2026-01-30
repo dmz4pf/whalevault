@@ -2,7 +2,7 @@
 # Multi-stage build for Python + Rust (Veil SDK)
 
 # Stage 1: Build Rust extensions
-FROM rust:1.75-slim-bookworm as rust-builder
+FROM rust:1.83-slim-bookworm as rust-builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -18,7 +18,7 @@ RUN pip3 install maturin --break-system-packages
 
 # Copy veil SDK source
 WORKDIR /build
-COPY ../veil /build/veil
+COPY veil /build/veil
 
 # Build the Rust extension wheel
 WORKDIR /build/veil
@@ -39,7 +39,7 @@ WORKDIR /app
 COPY --from=rust-builder /build/wheels /wheels
 
 # Copy backend source
-COPY . /app
+COPY backend /app
 
 # Create requirements for production (without local veil reference)
 RUN grep -v "^-e" requirements.txt > requirements-prod.txt && \
