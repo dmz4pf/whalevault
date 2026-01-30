@@ -64,9 +64,11 @@ export function Header() {
       >
         <div className="max-w-7xl mx-auto px-[50px]">
           <div className="flex items-center justify-between h-[72px]">
-            {/* Logo - lowercase with blinking cursor */}
-            <Link href="/home" className="flex items-center">
-              <span className="animate-cursor-blink text-terminal-green mr-2" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
+            {/* Logo with icon */}
+            <Link href="/home" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-bg-card border border-terminal-green/30 flex items-center justify-center" style={{ boxShadow: "0 0 15px rgba(0, 160, 136, 0.2)" }}>
+                <span className="text-terminal-green font-heading text-lg font-bold" style={{ textShadow: "0 0 10px #00a088" }}>W</span>
+              </div>
               <span
                 className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
                 style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
@@ -114,9 +116,11 @@ export function Header() {
     >
       <div className="max-w-7xl mx-auto px-[50px]">
         <div className="flex items-center justify-between h-[72px]">
-          {/* Logo - > whalevault */}
-          <Link href="/home" className="flex items-center">
-            <span className="animate-cursor-blink text-terminal-green mr-2" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
+          {/* Logo with icon */}
+          <Link href="/home" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-bg-card border border-terminal-green/30 flex items-center justify-center" style={{ boxShadow: "0 0 15px rgba(0, 160, 136, 0.2)" }}>
+              <span className="text-terminal-green font-heading text-lg font-bold" style={{ textShadow: "0 0 10px #00a088" }}>W</span>
+            </div>
             <span
               className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
               style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
