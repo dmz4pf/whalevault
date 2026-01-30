@@ -5,6 +5,7 @@ pydantic-settings>=2.1.0
 httpx>=0.26.0
 python-dotenv>=1.0.0
 slowapi>=0.1.9
+solana>=0.34.0
 
 # Veil SDK - Privacy infrastructure for Solana
 # Install from local path (editable mode for development)

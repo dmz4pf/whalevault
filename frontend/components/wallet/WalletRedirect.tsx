@@ -7,7 +7,7 @@ import { useWallet } from "@/hooks/useWallet";
 /**
  * Handles wallet connection/disconnection redirects:
  * - On connect: redirects to /dashboard (if on landing page)
- * - On disconnect: redirects to /landing
+ * - On disconnect: redirects to /home
  */
 export function WalletRedirect() {
   const { connected } = useWallet();
@@ -26,14 +26,14 @@ export function WalletRedirect() {
 
     // Wallet just connected - redirect to dashboard if on landing
     if (connected && !wasConnected.current) {
-      if (pathname === "/" || pathname === "/landing") {
+      if (pathname === "/" || pathname === "/home") {
         router.push("/dashboard");
       }
     }
 
     // Wallet just disconnected - redirect to landing
     if (!connected && wasConnected.current) {
-      router.push("/landing");
+      router.push("/home");
     }
 
     wasConnected.current = connected;

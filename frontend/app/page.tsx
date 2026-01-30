@@ -37,7 +37,7 @@ export default function SplashPage() {
         <motion.nav
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           className="px-12 md:px-16 py-6 flex justify-between items-center border-b"
           style={{
             background: "rgba(5, 5, 8, 0.7)",
@@ -62,7 +62,7 @@ export default function SplashPage() {
                 key={link}
                 initial={{ y: -10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
+                transition={{ duration: 0.6, delay: 0.5 + i * 0.1 }}
               >
                 <Link
                   href={link === "docs" ? "https://docs.whalevault.io" : `/${link}`}
@@ -86,7 +86,7 @@ export default function SplashPage() {
           <motion.h1
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="font-heading font-normal text-3xl md:text-4xl lg:text-5xl mb-5"
           >
             Initialize{" "}
@@ -103,7 +103,7 @@ export default function SplashPage() {
           <motion.p
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="text-text-dim text-base md:text-lg tracking-wider mb-10"
           >
             Your financial sovereignty awaits.
@@ -112,10 +112,10 @@ export default function SplashPage() {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 1.5, ease: [0.16, 1, 0.3, 1] }}
           >
             <Link
-              href="/landing"
+              href="/home"
               className="font-mono bg-transparent border border-terminal-green text-terminal-green px-10 py-4 text-sm md:text-base cursor-pointer transition-all duration-300 inline-block hover:bg-terminal-green hover:text-[#050508]"
               style={{
                 textShadow: "0 0 8px var(--terminal-green)",
@@ -139,7 +139,7 @@ export default function SplashPage() {
         <motion.footer
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, delay: 1.8, ease: [0.16, 1, 0.3, 1] }}
           className="px-12 md:px-16 py-8 border-t flex flex-col md:flex-row justify-between items-center gap-6"
           style={{
             background: "rgba(5, 5, 8, 0.5)",

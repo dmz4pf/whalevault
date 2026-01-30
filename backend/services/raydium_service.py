@@ -359,19 +359,17 @@ class RaydiumService:
         self,
         quote: RaydiumQuoteResponse,
         wallet_public_key: str,
-        recipient_public_key: str,
     ) -> bytes:
         """
         Get a serialized swap transaction from Raydium.
 
-        PRIVACY FEATURE: The wallet signs the transaction, but output tokens
-        go to the recipient's ATA. This allows the relayer to sign swaps
-        where tokens land in a user's fresh wallet.
+        Tokens go to the wallet's (signer's) ATA. Raydium requires outputAccount
+        to be owned by the signer, so we cannot route directly to a recipient.
+        Use a separate transfer transaction to send tokens to the recipient.
 
         Args:
             quote: RaydiumQuoteResponse from get_quote
             wallet_public_key: Solana public key of the signer (relayer)
-            recipient_public_key: Solana public key of token recipient
 
         Returns:
             Raw transaction bytes (base64-decoded)
@@ -379,9 +377,6 @@ class RaydiumService:
         Raises:
             RaydiumAPIError: On API failure after retries
         """
-        # Derive recipient's ATA for output token
-        output_account = self._derive_ata(recipient_public_key, quote.output_mint)
-
         resp = await self._request_with_retry(
             'POST',
             f"{self.api_url}/transaction/swap-base-in",
@@ -391,8 +386,7 @@ class RaydiumService:
                 "wallet": wallet_public_key,
                 "txVersion": "V0",
                 "wrapSol": True,
-                "unwrapSol": False,  # Keep as token, send to recipient's ATA
-                "outputAccount": output_account,
+                "unwrapSol": False,
             },
         )
         data = resp.json()

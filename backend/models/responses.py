@@ -148,10 +148,14 @@ class SwapQuoteResponse(BaseModel):
 
 
 class SwapExecuteResponse(BaseModel):
-    """Response from executing a private swap."""
+    """Response from executing a private swap.
+
+    Two-transaction flow returns both swap and transfer signatures.
+    """
 
     unshield_signature: str = Field(..., alias="unshieldSignature")
     swap_signature: str = Field(..., alias="swapSignature")
+    transfer_signature: str = Field("", alias="transferSignature")
     output_amount: str = Field(..., alias="outputAmount")
     output_mint: str = Field(..., alias="outputMint")
     recipient: str
