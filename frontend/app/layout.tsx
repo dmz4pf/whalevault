@@ -1,14 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Share_Tech_Mono, Chakra_Petch } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { Toaster } from "sonner";
-import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { WalletRedirect } from "@/components/wallet/WalletRedirect";
 import { Header } from "@/components/layout/Header";
 import { ErrorBoundary } from "@/components/feedback/ErrorBoundary";
 import { BinaryRain, HexStream, CRTEffects } from "@/components/effects";
 import "./globals.css";
+
+// Dynamic import with ssr: false to prevent prerendering issues with Solana connection
+const WalletProvider = dynamic(
+  () => import("@/components/wallet/WalletProvider").then((mod) => mod.WalletProvider),
+  { ssr: false }
+);
 
 const shareTechMono = Share_Tech_Mono({
   weight: "400",
