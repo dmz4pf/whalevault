@@ -6,6 +6,7 @@ and the withdrawal recipient.
 """
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -49,10 +50,18 @@ class RelayerService:
         self._program_id = settings.program_id
 
     def _load_keypair(self) -> Keypair:
-        """Load the relayer keypair from file."""
+        """Load the relayer keypair from env var or file."""
         if self._keypair is not None:
             return self._keypair
 
+        # First try env var (for Railway/production)
+        keypair_json = os.environ.get("RELAYER_KEYPAIR_JSON")
+        if keypair_json:
+            keypair_bytes = bytes(json.loads(keypair_json))
+            self._keypair = Keypair.from_bytes(keypair_bytes)
+            return self._keypair
+
+        # Fall back to file (for local dev)
         keypair_path = Path(self._keypair_path)
         if not keypair_path.exists():
             raise RelayerError(
