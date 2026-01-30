@@ -193,7 +193,7 @@ export default function DashboardPage() {
           {/* Account Status */}
           <div>
             <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-5">
-              {/* ACCOUNT_STATUS */}
+              ACCOUNT_STATUS
             </div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           {/* Privacy Pools */}
           <div>
             <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-5">
-              {/* PRIVACY_POOLS */}
+              PRIVACY_POOLS
             </div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -329,7 +329,7 @@ export default function DashboardPage() {
           {/* Quick Commands */}
           <div>
             <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-5">
-              {/* QUICK_COMMANDS */}
+              QUICK_COMMANDS
             </div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -378,7 +378,7 @@ export default function DashboardPage() {
           {/* Your Positions */}
           <div>
             <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-5">
-              {/* YOUR_POSITIONS */}
+              YOUR_POSITIONS
             </div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -421,7 +421,7 @@ export default function DashboardPage() {
           {/* Recent Activity */}
           <div>
             <div className="font-heading text-[13px] text-white uppercase tracking-[3px] mb-5">
-              {/* RECENT_ACTIVITY */}
+              RECENT_ACTIVITY
             </div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
