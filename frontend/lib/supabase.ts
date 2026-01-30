@@ -1,13 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Hardcoded to avoid Vercel env variable issues
+const supabaseUrl = "https://spxwryqmcdwkkskgnups.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNweHdyeXFtY2R3a2tza2dudXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDAyMjgsImV4cCI6MjA4NTExNjIyOH0.kyt1uZJGJys60RLlD5DHVAJhyxAycnSXqv9A8cOlVuM";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Missing Supabase configuration. Cloud backup disabled.");
-}
-
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : null;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
