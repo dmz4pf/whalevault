@@ -73,10 +73,12 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
 
   const [state, setState] = useState<SwapState>(INITIAL_STATE);
   const abortRef = useRef(false);
+  const isSwappingRef = useRef(false); // Prevent double-execution race condition
   const raydiumResponseRef = useRef<RaydiumComputeResponse | null>(null);
 
   const reset = useCallback(() => {
     abortRef.current = true;
+    isSwappingRef.current = false;
     raydiumResponseRef.current = null;
     setState(INITIAL_STATE);
   }, []);
@@ -278,11 +280,20 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
 
   const swap = useCallback(
     async (position: Position, outputMint: string, recipient: string) => {
+      // Prevent double-execution from rapid clicks (sync check before async setState)
+      if (isSwappingRef.current) {
+        console.log("[PrivateSwap] Swap already in progress, ignoring duplicate call");
+        return;
+      }
+      isSwappingRef.current = true;
+
       if (!publicKey) {
+        isSwappingRef.current = false;
         setState((prev) => ({ ...prev, status: "error", error: "Wallet not connected" }));
         return;
       }
       if (!position.commitment) {
+        isSwappingRef.current = false;
         setState((prev) => ({ ...prev, status: "error", error: "Position missing commitment" }));
         return;
       }
@@ -329,6 +340,8 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
         if (abortRef.current) return;
         const message = error instanceof Error ? error.message : "Private swap failed";
         setState((prev) => ({ ...prev, status: "error", error: message }));
+      } finally {
+        isSwappingRef.current = false;
       }
     },
     [publicKey, swapDevnet, swapMainnet, updatePosition, addTransaction]
