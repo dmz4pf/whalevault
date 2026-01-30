@@ -50,7 +50,7 @@ export const API_BASE_URL =
 
 export const SOLANA_NETWORK: NetworkType = "devnet";
 
-export const SOLANA_RPC_URL = "https://api.devnet.solana.com";
+export const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
 export interface SupportedToken {
   symbol: string;
