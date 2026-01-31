@@ -86,7 +86,6 @@ export default function UnshieldPage() {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedAction, setSelectedAction] = useState<UnshieldAction>("send");
   const [recipientAddress, setRecipientAddress] = useState<string>("");
-  const [useDifferentAddress, setUseDifferentAddress] = useState(false);
   const [delayMs, setDelayMs] = useState<number>(0);
   const [tick, setTick] = useState(0);
 
@@ -129,7 +128,7 @@ export default function UnshieldPage() {
     }
 
     const recipient =
-      selectedAction === "send" && useDifferentAddress && recipientAddress.trim()
+      selectedAction === "send" && recipientAddress.trim()
         ? recipientAddress.trim()
         : undefined;
 
@@ -398,53 +397,19 @@ export default function UnshieldPage() {
                 className="space-y-4"
               >
                 <SectionHeader>Recipient</SectionHeader>
-                <div className="bg-[rgba(0,0,0,0.3)] border border-border rounded-xl p-4 space-y-4">
-                  {/* Toggle - entire row clickable */}
-                  <button
-                    type="button"
-                    onClick={() => !isLoading && setUseDifferentAddress(!useDifferentAddress)}
+                <div className="bg-[rgba(0,0,0,0.3)] border border-border rounded-xl p-4 space-y-3">
+                  <input
+                    type="text"
+                    value={recipientAddress}
+                    onChange={(e) => setRecipientAddress(e.target.value)}
+                    placeholder="Enter Solana address (e.g., 7xKX...)"
                     disabled={isLoading}
-                    className="w-full flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="text-text-dim text-xs">
-                      Different Address
-                    </span>
-                    <div
-                      className={cn(
-                        "w-12 h-6 rounded-full transition-colors relative",
-                        useDifferentAddress
-                          ? "bg-terminal-green"
-                          : "bg-border"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-0.5 w-5 h-5 rounded-full transition-transform",
-                          useDifferentAddress
-                            ? "translate-x-6 bg-bg"
-                            : "translate-x-0.5 bg-text"
-                        )}
-                      />
-                    </div>
-                  </button>
-
-                  {/* Address Input */}
-                  {useDifferentAddress && (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={recipientAddress}
-                        onChange={(e) => setRecipientAddress(e.target.value)}
-                        placeholder="Enter Solana address (e.g., 7xKX...)"
-                        disabled={isLoading}
-                        className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50"
-                      />
-                      <p className="text-xs text-text-dim">
-                        For maximum privacy, use a fresh wallet address that has
-                        never been linked to your main wallet.
-                      </p>
-                    </div>
-                  )}
+                    className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50"
+                  />
+                  <p className="text-xs text-text-dim">
+                    For maximum privacy, use a fresh wallet address that has
+                    never been linked to your main wallet.
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -562,9 +527,7 @@ export default function UnshieldPage() {
                 disabled={
                   !selectedPosition ||
                   isLoading ||
-                  (selectedAction === "send" &&
-                    useDifferentAddress &&
-                    !recipientAddress.trim())
+                  (selectedAction === "send" && !recipientAddress.trim())
                 }
                 variant={selectedAction === "wallet" ? "ghost" : "primary"}
               >
