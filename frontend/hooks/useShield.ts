@@ -176,6 +176,7 @@ export function useShield(): UseShieldReturn {
           timestamp: Date.now(),
           txHash: signature,
           status: "confirmed",
+          privacyDelay: delayMs ?? 0,
         };
         addTransaction(txRecord);
 

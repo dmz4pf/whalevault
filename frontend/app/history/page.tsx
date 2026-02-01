@@ -243,6 +243,7 @@ export default function HistoryPage() {
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">TYPE</th>
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">AMOUNT</th>
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">TX_HASH</th>
+                    <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">DELAY</th>
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">STATUS</th>
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">TIME</th>
                   </tr>
@@ -292,6 +293,26 @@ export default function HistoryPage() {
                         >
                           {shortenHash(tx.txHash)}
                         </a>
+                      </td>
+                      <td className="p-4">
+                        {tx.type === "shield" ? (
+                          <span className={cn(
+                            "font-mono text-xs px-2 py-1 rounded",
+                            tx.privacyDelay && tx.privacyDelay > 0
+                              ? "text-yellow-400 bg-yellow-500/10"
+                              : "text-text-dim bg-bg-card"
+                          )}>
+                            {tx.privacyDelay && tx.privacyDelay > 0
+                              ? tx.privacyDelay >= 86400000
+                                ? `${Math.floor(tx.privacyDelay / 86400000)}d`
+                                : tx.privacyDelay >= 3600000
+                                  ? `${Math.floor(tx.privacyDelay / 3600000)}h`
+                                  : `${Math.floor(tx.privacyDelay / 60000)}m`
+                              : "instant"}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted font-mono text-xs">—</span>
+                        )}
                       </td>
                       <td className="p-4">
                         <span

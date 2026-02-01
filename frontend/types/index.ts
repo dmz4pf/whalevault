@@ -37,6 +37,7 @@ export interface Transaction {
   timestamp: number;
   txHash: string;
   status: "confirmed" | "pending" | "failed";
+  privacyDelay?: number; // Delay in ms (0 = instant, 3600000 = 1h, etc.)
 }
 
 export interface Token {
