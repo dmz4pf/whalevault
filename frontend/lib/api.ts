@@ -11,6 +11,7 @@ import type {
   APIError,
   RelayerInfoResponse,
   RelayUnshieldResponse,
+  RelayTransferResponse,
   SwapQuoteResponse,
   SwapExecuteResponse,
   SwapTokenInfo,
@@ -188,6 +189,60 @@ export async function relayUnshield(
   recipient: string
 ): Promise<RelayUnshieldResponse> {
   return fetchApi<RelayUnshieldResponse>("/relay/unshield", {
+    method: "POST",
+    body: JSON.stringify({
+      job_id: jobId,
+      recipient,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Private Transfer Operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Request a ZK proof for private transfer (shielded-to-shielded)
+ *
+ * Private transfers move funds from one shielded position to another.
+ * The sender's commitment is nullified and a new commitment is created
+ * for the recipient. SOL never leaves the pool.
+ *
+ * @param commitment - Sender's commitment hash (64 hex chars)
+ * @param secret - Sender's secret (64 hex chars)
+ * @param amount - Amount in lamports
+ * @param recipient - Recipient's Solana address (for reference only)
+ * @param denomination - Pool denomination (optional)
+ */
+export async function requestPrivateTransferProof(
+  commitment: string,
+  secret: string,
+  amount: number,
+  recipient: string,
+  denomination?: number | null
+): Promise<ProofJobResponse> {
+  return fetchApi<ProofJobResponse>("/transfer/proof", {
+    method: "POST",
+    body: JSON.stringify({ commitment, secret, amount, recipient, denomination }),
+  });
+}
+
+/**
+ * Relay a private transfer transaction through the relayer service
+ *
+ * The relayer signs and submits the transfer transaction.
+ * Returns the recipient's secret and new commitment that must be
+ * shared off-chain so the recipient can later unshield.
+ *
+ * @param jobId - The proof job ID from /transfer/proof
+ * @param recipient - Recipient's Solana address (for reference)
+ * @returns Transaction signature, recipient_secret, and new_commitment
+ */
+export async function relayPrivateTransfer(
+  jobId: string,
+  recipient: string
+): Promise<RelayTransferResponse> {
+  return fetchApi<RelayTransferResponse>("/relay/transfer", {
     method: "POST",
     body: JSON.stringify({
       job_id: jobId,

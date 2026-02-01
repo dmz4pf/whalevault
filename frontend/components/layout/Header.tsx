@@ -18,7 +18,7 @@ interface NavItem {
 // Landing page nav items (4 items, no Dashboard)
 const landingNavItems: NavItem[] = [
   { href: "/shield", label: "SHIELD" },
-  { href: "/unshield", label: "WITHDRAW" },
+  { href: "/send", label: "SEND" },
   { href: "/private-swap", label: "SWAP" },
   { href: "/history", label: "HISTORY" },
 ];
@@ -27,7 +27,7 @@ const landingNavItems: NavItem[] = [
 const appNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/shield", label: "Shield" },
-  { href: "/unshield", label: "Withdraw" },
+  { href: "/send", label: "Send" },
   { href: "/private-swap", label: "Swap" },
   { href: "/history", label: "History" },
 ];

@@ -8,9 +8,9 @@ and withdrawal recipient.
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from models.requests import RelayUnshieldRequest
-from models.responses import RelayUnshieldResponse, RelayerInfoResponse
-from proof_queue.job_queue import ProofJobQueue, JobStatus
+from models.requests import RelayUnshieldRequest, RelayTransferRequest
+from models.responses import RelayUnshieldResponse, RelayerInfoResponse, RelayTransferResponse
+from proof_queue.job_queue import ProofJobQueue, JobStatus, JobType
 from services.relayer_service import RelayerService
 from api.deps import get_job_queue, get_relayer_service
 from utils.errors import RelayerError
@@ -118,4 +118,97 @@ async def relay_unshield(
         raise HTTPException(
             status_code=500,
             detail=f"Relay failed: {str(e)}"
+        )
+
+
+@router.post("/transfer", response_model=RelayTransferResponse)
+async def relay_transfer(
+    request: RelayTransferRequest,
+    job_queue: ProofJobQueue = Depends(get_job_queue),
+    relayer: RelayerService = Depends(get_relayer_service),
+) -> RelayTransferResponse:
+    """
+    Relay a private transfer transaction through the relayer.
+
+    Private transfers move funds from one shielded commitment to another.
+    No SOL leaves the pool - only the commitment changes.
+
+    The recipient will need the returned recipient_secret and new_commitment
+    to later unshield the funds. These must be shared off-chain.
+
+    Prerequisites:
+    1. Transfer proof generation must be complete (call /transfer/proof first)
+    2. Relayer must be enabled
+    """
+    if not relayer.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Relayer service is currently disabled"
+        )
+
+    # Get the proof job
+    job = await job_queue.get_status(request.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Proof job not found")
+
+    if job.job_type != JobType.TRANSFER:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid job type - expected transfer proof job"
+        )
+
+    if job.status != JobStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Proof job not complete (status: {job.status.value})"
+        )
+
+    if not job.result:
+        raise HTTPException(status_code=500, detail="Proof result missing")
+
+    # Get proof data from job result
+    proof_hex = job.result.get("proof", "")
+    nullifier_hex = job.result.get("nullifier", "")
+    new_commitment_hex = job.result.get("new_commitment", "")
+    recipient_secret_hex = job.result.get("recipient_secret", "")
+
+    if not all([proof_hex, nullifier_hex, new_commitment_hex, recipient_secret_hex]):
+        raise HTTPException(
+            status_code=500,
+            detail="Transfer proof data incomplete"
+        )
+
+    # Convert hex to bytes
+    proof_bytes = bytes.fromhex(proof_hex)
+    nullifier_bytes = bytes.fromhex(nullifier_hex)
+    new_commitment_bytes = bytes.fromhex(new_commitment_hex)
+
+    try:
+        # Relay the transfer transaction
+        signature = await relayer.relay_transfer(
+            nullifier=nullifier_bytes,
+            new_commitment=new_commitment_bytes,
+            proof=proof_bytes,
+            denomination=job.denomination,
+        )
+
+        # No fee for transfers (SOL doesn't leave pool)
+        return RelayTransferResponse(
+            signature=signature,
+            fee=0,
+            recipientSecret=recipient_secret_hex,
+            newCommitment=new_commitment_hex,
+            amount=job.amount,
+            recipient=request.recipient,
+        )
+
+    except RelayerError as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.message,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transfer relay failed: {str(e)}"
         )

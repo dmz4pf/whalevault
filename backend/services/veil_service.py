@@ -70,6 +70,17 @@ class ProofResult:
     public_inputs: dict
 
 
+@dataclass
+class TransferProofResult:
+    """Result of private transfer proof generation."""
+
+    proof: str
+    nullifier: str
+    new_commitment: str
+    recipient_secret: str
+    public_inputs: dict
+
+
 class VeilService:
     """Service for cryptographic operations using Veil SDK."""
 
@@ -304,6 +315,136 @@ class VeilService:
                 {"pubkey": str(nullifier_marker_pda), "isSigner": False, "isWritable": True},
                 {"pubkey": str(vault_pda), "isSigner": False, "isWritable": True},
                 {"pubkey": recipient, "isSigner": False, "isWritable": True},
+                {"pubkey": relayer, "isSigner": True, "isWritable": True},
+                {"pubkey": SYSTEM_PROGRAM_ID, "isSigner": False, "isWritable": False},
+            ],
+            "data": base64.b64encode(data).decode("utf-8"),
+        }
+
+    def generate_transfer_proof(
+        self,
+        commitment: str,
+        secret: str,
+        amount: int,
+        recipient: str,
+    ) -> TransferProofResult:
+        """
+        Generate a proof for private transfer (shielded-to-shielded).
+
+        This creates a NEW commitment for the recipient with a random secret.
+        The sender's commitment is nullified, recipient gets a new commitment.
+        SOL never moves - it stays in the pool.
+
+        Args:
+            commitment: Sender's hex-encoded commitment
+            secret: Sender's hex-encoded secret
+            amount: Amount in lamports being transferred
+            recipient: Recipient's Solana address (for reference only)
+
+        Returns:
+            TransferProofResult with proof, nullifier, new_commitment, and recipient_secret
+        """
+        secret_bytes = validate_hex(secret, "secret")
+        commitment_bytes = validate_hex(commitment, "commitment")
+
+        # Generate nullifier from sender's commitment
+        nullifier_bytes = _rust_core.generate_nullifier(
+            commitment=commitment_bytes,
+            secret=secret_bytes
+        )
+        nullifier_hex = bytes_to_hex(nullifier_bytes)
+
+        # Generate NEW random secret for recipient
+        recipient_secret_hex = generate_secret()
+        recipient_secret_bytes = hex_to_bytes(recipient_secret_hex)
+
+        # Generate NEW commitment for recipient
+        new_commitment_bytes = _rust_core.generate_commitment(
+            amount=amount,
+            secret=recipient_secret_bytes
+        )
+        new_commitment_hex = bytes_to_hex(new_commitment_bytes)
+
+        # Generate MVP transfer proof (96 bytes)
+        # Similar to unshield proof but signs: nullifier || new_commitment
+        amount_bytes = amount.to_bytes(32, byteorder='big')
+
+        hash1 = _rust_core.poseidon_hash([nullifier_bytes, new_commitment_bytes])
+        hash2 = _rust_core.poseidon_hash([amount_bytes, commitment_bytes])
+        signature_part1 = _rust_core.poseidon_hash([hash1, hash2])
+        signature_part2 = _rust_core.poseidon_hash([hash2, hash1])
+        signature_bytes = signature_part1 + signature_part2  # 64 bytes
+
+        pubkey_bytes = _rust_core.poseidon_hash([secret_bytes, new_commitment_bytes])  # 32 bytes
+
+        proof_bytes = signature_bytes + pubkey_bytes  # 96 bytes total
+
+        return TransferProofResult(
+            proof=bytes_to_hex(proof_bytes),
+            nullifier=nullifier_hex,
+            new_commitment=new_commitment_hex,
+            recipient_secret=recipient_secret_hex,
+            public_inputs={
+                "nullifier": nullifier_hex,
+                "new_commitment": new_commitment_hex,
+                "amount": amount,
+                "recipient": recipient,
+            },
+        )
+
+    def build_transfer_instruction(
+        self,
+        proof: bytes,
+        nullifier: bytes,
+        new_commitment: bytes,
+        relayer: str,
+        denomination: int = 0,
+    ) -> dict:
+        """
+        Build the instruction data for a private transfer transaction.
+
+        A transfer nullifies the sender's commitment and adds a new commitment
+        for the recipient. No SOL moves - it stays in the shielded pool.
+
+        Args:
+            proof: The proof bytes (96 bytes for MVP)
+            nullifier: The nullifier hash (32 bytes)
+            new_commitment: The new commitment for recipient (32 bytes)
+            relayer: Relayer/signer wallet address (base58)
+            denomination: Pool denomination in lamports (0 = custom)
+
+        Returns:
+            Instruction data dict for Solana transaction
+
+        Note:
+            Account order must match Veil program's Transfer struct:
+            [pool, nullifier_marker, relayer, system_program]
+        """
+        import hashlib
+        import struct
+        import base64
+
+        program_pubkey = Pubkey.from_string(self.program_id)
+        pool_pda, _ = find_pool_pda(program_pubkey, denomination)
+        nullifier_marker_pda, _ = find_nullifier_marker_pda(program_pubkey, pool_pda, nullifier)
+
+        # Anchor discriminator = first 8 bytes of sha256("global:transfer")
+        discriminator = hashlib.sha256(b"global:transfer").digest()[:8]
+
+        # Pack: discriminator (8) + nullifier (32) + new_commitment (32) + proof (Vec<u8>)
+        data = (
+            discriminator +
+            nullifier +
+            new_commitment +
+            struct.pack("<I", len(proof)) +
+            proof
+        )
+
+        return {
+            "programId": self.program_id,
+            "keys": [
+                {"pubkey": str(pool_pda), "isSigner": False, "isWritable": True},
+                {"pubkey": str(nullifier_marker_pda), "isSigner": False, "isWritable": True},
                 {"pubkey": relayer, "isSigner": True, "isWritable": True},
                 {"pubkey": SYSTEM_PROGRAM_ID, "isSigner": False, "isWritable": False},
             ],

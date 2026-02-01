@@ -154,3 +154,52 @@ class ComputeCommitmentRequest(BaseModel):
         max_length=64,
         description="The secret used to generate the commitment (64 hex characters)",
     )
+
+
+class PrivateTransferProofRequest(BaseModel):
+    """Request to generate a private transfer proof (shielded-to-shielded)."""
+
+    commitment: str = Field(
+        ...,
+        min_length=64,
+        max_length=64,
+        description="The sender's commitment hash (64 hex characters)",
+    )
+    secret: str = Field(
+        ...,
+        min_length=64,
+        max_length=64,
+        description="The sender's secret used to generate the commitment (64 hex characters)",
+    )
+    amount: int = Field(
+        ...,
+        gt=MIN_AMOUNT_LAMPORTS,
+        le=MAX_AMOUNT_LAMPORTS,
+        description=f"Amount in lamports to transfer (min: {MIN_AMOUNT_LAMPORTS}, max: {MAX_AMOUNT_LAMPORTS})",
+    )
+    recipient: str = Field(
+        ...,
+        min_length=32,
+        max_length=44,
+        description="Recipient's Solana public key (for reference, not used on-chain)",
+    )
+    denomination: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Pool denomination in lamports. null/0 = custom pool.",
+    )
+
+
+class RelayTransferRequest(BaseModel):
+    """Request to relay a private transfer transaction through the relayer."""
+
+    job_id: str = Field(
+        ...,
+        description="The proof job ID from the /transfer/proof endpoint",
+    )
+    recipient: str = Field(
+        ...,
+        min_length=32,
+        max_length=44,
+        description="Recipient Solana address (for reference only)",
+    )

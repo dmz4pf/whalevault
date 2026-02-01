@@ -4,7 +4,7 @@ export interface Position {
   amount: number;
   shieldedAmount: number;
   timestamp: number;
-  status: "shielded" | "unshielded" | "pending" | "failed";
+  status: "shielded" | "unshielded" | "pending" | "failed" | "transferred";
   commitment: string;
   /**
    * Nonce used for secret derivation from wallet signature.
@@ -31,7 +31,7 @@ export interface Position {
 
 export interface Transaction {
   id: string;
-  type: "shield" | "unshield";
+  type: "shield" | "unshield" | "transfer";
   token: string;
   amount: number;
   timestamp: number;

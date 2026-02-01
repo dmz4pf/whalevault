@@ -149,3 +149,27 @@ export interface RelayUnshieldResponse {
   amountSent: number; // Amount sent after fee
   recipient: string;  // Recipient address
 }
+
+// Private Transfer types
+export interface RelayTransferResponse {
+  signature: string;       // Transaction signature
+  fee: number;             // Fee charged (0 for transfers)
+  recipientSecret: string; // Secret the recipient needs to unshield (64 hex chars)
+  newCommitment: string;   // Recipient's commitment in the pool (64 hex chars)
+  amount: number;          // Amount transferred in lamports
+  recipient: string;       // Recipient address (for reference)
+}
+
+export interface TransferProofResult {
+  proof: string;
+  nullifier: string;
+  newCommitment: string;
+  recipientSecret: string;
+  publicInputs: {
+    nullifier: string;
+    newCommitment: string;
+    amount: number;
+    recipient: string;
+  };
+  verified: boolean;
+}

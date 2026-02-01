@@ -182,3 +182,26 @@ class ComputeCommitmentResponse(BaseModel):
     """Response containing the computed commitment."""
 
     commitment: str = Field(..., description="The computed commitment hash (64 hex characters)")
+
+
+class RelayTransferResponse(BaseModel):
+    """Response from relaying a private transfer transaction.
+
+    Contains critical data the sender must share with recipient off-chain:
+    - recipient_secret: The recipient needs this to later unshield
+    - new_commitment: The recipient's position in the shielded pool
+    """
+
+    signature: str = Field(..., description="Transaction signature on Solana")
+    fee: int = Field(..., description="Relayer fee charged in lamports")
+    recipient_secret: str = Field(
+        ..., alias="recipientSecret", description="Secret the recipient needs to unshield (64 hex chars)"
+    )
+    new_commitment: str = Field(
+        ..., alias="newCommitment", description="Recipient's commitment in the shielded pool (64 hex chars)"
+    )
+    amount: int = Field(..., description="Amount transferred in lamports")
+    recipient: str = Field(..., description="Recipient address (for reference)")
+
+    class Config:
+        populate_by_name = True

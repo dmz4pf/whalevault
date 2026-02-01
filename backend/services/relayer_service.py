@@ -189,6 +189,57 @@ class RelayerService:
             recipient=recipient,
         )
 
+    async def relay_transfer(
+        self,
+        nullifier: bytes,
+        new_commitment: bytes,
+        proof: bytes,
+        denomination: int = 0,
+    ) -> str:
+        """
+        Relay a private transfer transaction.
+
+        Private transfers move funds from one shielded commitment to another
+        without any SOL leaving the pool. The relayer signs the transaction.
+
+        Args:
+            nullifier: Nullifier bytes (32 bytes)
+            new_commitment: New commitment for recipient (32 bytes)
+            proof: ZK proof bytes
+
+        Returns:
+            Transaction signature
+        """
+        if not self.enabled:
+            raise RelayerError("Relayer is disabled")
+
+        if len(nullifier) != 32:
+            raise RelayerError("Invalid nullifier length", details={"length": len(nullifier)})
+
+        if len(new_commitment) != 32:
+            raise RelayerError("Invalid new_commitment length", details={"length": len(new_commitment)})
+
+        keypair = self._load_keypair()
+        client = self._get_solana_client()
+
+        try:
+            signature = await client.submit_transfer_transaction(
+                nullifier=nullifier,
+                new_commitment=new_commitment,
+                proof=proof,
+                payer_keypair=bytes(keypair),
+            )
+        except Exception as e:
+            import traceback
+            print(f"[Relayer] Transfer transaction failed: {e}")
+            print(f"[Relayer] Traceback: {traceback.format_exc()}")
+            raise RelayerError(
+                f"Failed to submit transfer transaction: {str(e)}",
+                details={"error": str(e), "traceback": traceback.format_exc()}
+            )
+
+        return signature
+
     async def get_balance(self) -> int:
         """Get the relayer's SOL balance in lamports."""
         client = self._get_solana_client()

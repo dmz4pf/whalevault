@@ -18,6 +18,13 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 
+class JobType(str, Enum):
+    """Type of proof generation job."""
+
+    UNSHIELD = "unshield"
+    TRANSFER = "transfer"
+
+
 @dataclass
 class ProofJob:
     """Represents a proof generation job."""
@@ -36,6 +43,7 @@ class ProofJob:
     amount: int = 0
     recipient: str = ""
     denomination: int = 0
+    job_type: JobType = JobType.UNSHIELD
 
 
 # Constants
@@ -92,7 +100,7 @@ class ProofJobQueue:
         recipient: str,
         denomination: int = 0,
     ) -> ProofJob:
-        """Submit a new proof generation job."""
+        """Submit a new unshield proof generation job."""
         job_id = str(uuid.uuid4())
         job = ProofJob(
             id=job_id,
@@ -102,6 +110,7 @@ class ProofJobQueue:
             recipient=recipient,
             denomination=denomination,
             stage="queued",
+            job_type=JobType.UNSHIELD,
         )
 
         async with self._lock:
@@ -109,6 +118,35 @@ class ProofJobQueue:
 
         # Start background processing
         asyncio.create_task(self._process_job(job_id))
+
+        return job
+
+    async def submit_transfer(
+        self,
+        commitment: str,
+        secret: str,
+        amount: int,
+        recipient: str,
+        denomination: int = 0,
+    ) -> ProofJob:
+        """Submit a new private transfer proof generation job."""
+        job_id = str(uuid.uuid4())
+        job = ProofJob(
+            id=job_id,
+            commitment=commitment,
+            secret=secret,
+            amount=amount,
+            recipient=recipient,
+            denomination=denomination,
+            stage="queued",
+            job_type=JobType.TRANSFER,
+        )
+
+        async with self._lock:
+            self._jobs[job_id] = job
+
+        # Start background processing
+        asyncio.create_task(self._process_transfer_job(job_id))
 
         return job
 
@@ -192,3 +230,64 @@ class ProofJobQueue:
                 if job_id in self._jobs:
                     self._jobs[job_id].status = JobStatus.FAILED
                     self._jobs[job_id].error = "Proof generation failed unexpectedly"
+
+    async def _process_transfer_job(self, job_id: str) -> None:
+        """Process private transfer proof generation job."""
+        # Extract parameters while holding the lock
+        async with self._lock:
+            if job_id not in self._jobs:
+                return
+            job = self._jobs[job_id]
+            job.status = JobStatus.PROCESSING
+            commitment = job.commitment
+            secret = job.secret
+            amount = job.amount
+            recipient = job.recipient
+
+        try:
+            await self.update_progress(job_id, 10, "initializing")
+            await asyncio.sleep(STAGE_DELAY_SECONDS)
+
+            await self.update_progress(job_id, 30, "generating_transfer_witnesses")
+            await asyncio.sleep(STAGE_DELAY_SECONDS)
+
+            await self.update_progress(job_id, 60, "computing_transfer_proof")
+
+            # Generate transfer proof using VeilService
+            veil_result = await asyncio.to_thread(
+                self._veil_service.generate_transfer_proof,
+                commitment=commitment,
+                secret=secret,
+                amount=amount,
+                recipient=recipient,
+            )
+
+            await self.update_progress(job_id, 90, "verifying_proof")
+            await asyncio.sleep(STAGE_DELAY_SECONDS * 0.66)
+
+            await self.update_progress(job_id, 100, "finalizing")
+
+            # Store transfer proof result (includes recipient_secret and new_commitment)
+            async with self._lock:
+                if job_id in self._jobs:
+                    self._jobs[job_id].status = JobStatus.COMPLETED
+                    self._jobs[job_id].result = {
+                        "proof": veil_result.proof,
+                        "nullifier": veil_result.nullifier,
+                        "new_commitment": veil_result.new_commitment,
+                        "recipient_secret": veil_result.recipient_secret,
+                        "publicInputs": veil_result.public_inputs,
+                        "verified": True,
+                    }
+
+        except (ValidationError, VeilError) as e:
+            async with self._lock:
+                if job_id in self._jobs:
+                    self._jobs[job_id].status = JobStatus.FAILED
+                    self._jobs[job_id].error = str(e)
+
+        except Exception:
+            async with self._lock:
+                if job_id in self._jobs:
+                    self._jobs[job_id].status = JobStatus.FAILED
+                    self._jobs[job_id].error = "Transfer proof generation failed unexpectedly"
