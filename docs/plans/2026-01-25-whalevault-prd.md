@@ -579,4 +579,3 @@ pub mod veil_program {
 ---
 
 *Document generated: January 25, 2026*
-*Author: Claude Code + Human collaboration*

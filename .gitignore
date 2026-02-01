@@ -41,3 +41,13 @@ coverage/
 .playwright-mcp/
 playwright-report/
 test-results/
+
+# Local dev config
+.local-dev/
+.serena/
+FOR[Dami].md
+
+# Conversation logs & prompts
+docs/context/
+docs/prompts/
+frontend/docs/context/
