@@ -184,32 +184,40 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
       console.log(`[PrivateSwap] Calling backend: recipient=${recipient}, outputMint=${outputMint}`);
       const swapResult = await executeSwapDevnet(jobId, recipient, outputMint);
 
-      // Handle partial success (unshield ok, swap failed)
-      if (!swapResult.swapSignature) {
+      // Handle fallback case: swap failed but SOL was sent directly
+      const isFallback = !swapResult.swapSignature && swapResult.transferSignature;
+      const signatureToConfirm = swapResult.swapSignature || swapResult.transferSignature;
+
+      // Only error if both swap AND fallback failed
+      if (!signatureToConfirm) {
         throw new Error("Swap failed after unshield - SOL in relayer wallet. Contact support.");
       }
 
-      // Step 5: Confirm swap on-chain
+      // Step 5: Confirm transaction on-chain
       setState((prev) => ({
         ...prev,
         status: "confirming",
-        proofStage: "Confirming swap on chain...",
+        proofStage: isFallback ? "Confirming SOL transfer..." : "Confirming swap on chain...",
         unshieldSignature: swapResult.unshieldSignature,
-        swapSignature: swapResult.swapSignature,
+        swapSignature: signatureToConfirm,
       }));
 
-      const swapConfirmed = await waitForTransactionConfirmation(
-        swapResult.swapSignature,
+      const confirmed = await waitForTransactionConfirmation(
+        signatureToConfirm,
         30,
         1000
       );
-      if (!swapConfirmed) {
-        throw new Error("Swap transaction was not confirmed on-chain.");
+      if (!confirmed) {
+        throw new Error("Transaction was not confirmed on-chain.");
+      }
+
+      if (isFallback) {
+        console.log("[PrivateSwap] Fallback succeeded - SOL sent directly to recipient");
       }
 
       return {
         unshieldSignature: swapResult.unshieldSignature,
-        swapSignature: swapResult.swapSignature,
+        swapSignature: signatureToConfirm,
         outputAmount: swapResult.outputAmount,
       };
     },
@@ -339,6 +347,13 @@ export function usePrivateSwap(): UsePrivateSwapReturn {
       } catch (error) {
         if (abortRef.current) return;
         const message = error instanceof Error ? error.message : "Private swap failed";
+
+        // If unshield succeeded but swap failed, still mark position as unshielded
+        // The SOL has left the shielded pool - position should be cleared
+        if (message.includes("Swap failed after unshield") || message.includes("failsafe")) {
+          updatePosition(position.id, { status: "unshielded" });
+        }
+
         setState((prev) => ({ ...prev, status: "error", error: message }));
       } finally {
         isSwappingRef.current = false;

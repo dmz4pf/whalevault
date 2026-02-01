@@ -143,6 +143,9 @@ export function useUnshield(): UseUnshieldReturn {
       // For maximum privacy, users should withdraw to a DIFFERENT wallet
       const recipient = recipientAddress || publicKey.toBase58();
 
+      // Track if relayer submitted tx (SOL left the pool)
+      let relayerSubmitted = false;
+
       try {
         // Step 1: Derive secret from wallet signature
         // This requires user to sign a message to prove ownership
@@ -190,6 +193,7 @@ export function useUnshield(): UseUnshieldReturn {
         console.log("[Unshield] Sending to relayer for submission...");
 
         const relayResult = await relayUnshield(jobId, recipient);
+        relayerSubmitted = true; // SOL has left the shielded pool
         console.log("[Unshield] Relayer submitted transaction:", relayResult.signature);
 
         // Step 4: Wait for on-chain confirmation
@@ -241,6 +245,11 @@ export function useUnshield(): UseUnshieldReturn {
 
         const message = error instanceof Error ? error.message : "Stealth withdrawal failed";
         console.error("[Unshield] Error:", error);
+
+        // If relayer already submitted tx, SOL left the pool - mark as unshielded
+        if (relayerSubmitted) {
+          updatePosition(position.id, { status: "unshielded" });
+        }
 
         // Provide user-friendly error messages
         const userMessage = message.includes("Signature required")

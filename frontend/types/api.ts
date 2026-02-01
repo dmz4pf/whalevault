@@ -113,6 +113,7 @@ export interface SwapQuoteResponse {
 export interface SwapExecuteResponse {
   unshieldSignature: string;
   swapSignature: string;
+  transferSignature?: string; // SOL fallback transfer when swap fails
   outputAmount: string;
   outputMint: string;
   recipient: string;
