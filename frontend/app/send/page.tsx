@@ -588,7 +588,7 @@ export default function SendPage() {
                       )}
 
                       <div className="bg-[rgba(0,160,136,0.08)] border border-[rgba(0,160,136,0.2)] rounded-lg p-4">
-                        <p className="text-xs text-text-dim">The recipient will receive a shielded position. You'll need to share the secret details with them so they can import and use it.</p>
+                        <p className="text-xs text-text-dim">The recipient will receive a shielded position. You&apos;ll need to share the secret details with them so they can import and use it.</p>
                       </div>
 
                       <TransactionModal isOpen={isTransferLoading} progress={transferProgress} stage={transferStage} title="Transferring" subtitle={selectedPosition ? `${formatSOL(selectedPosition.shieldedAmount)} SOL` : undefined} />
