@@ -109,8 +109,20 @@ function PrivateSwapContent() {
     }
   }, [searchParams, shieldedPositions, selectedPosition]);
 
+  // Loading state for disabling inputs (includes quote fetching)
   const isLoading =
     status === "quoting" ||
+    status === "deriving" ||
+    status === "requesting" ||
+    status === "generating" ||
+    status === "unshielding" ||
+    status === "building_route" ||
+    status === "swapping" ||
+    status === "executing" ||
+    status === "confirming";
+
+  // Only show modal during actual transaction (not during quote fetching)
+  const isTransacting =
     status === "deriving" ||
     status === "requesting" ||
     status === "generating" ||
@@ -562,9 +574,9 @@ function PrivateSwapContent() {
             </motion.div>
           )}
 
-          {/* Transaction Modal - Fullscreen with blur */}
+          {/* Transaction Modal - Fullscreen with blur (only during actual tx, not quote) */}
           <TransactionModal
-            isOpen={isLoading}
+            isOpen={isTransacting}
             progress={proofProgress}
             stage={proofStage || status}
             title="Private Swap"
