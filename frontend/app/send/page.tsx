@@ -28,6 +28,7 @@ import type { Position } from "@/types";
 type SendMode = "unshield" | "shielded";
 type ShieldedSubMode = "send" | "receive";
 type ImportInputMode = "paste" | "manual";
+type UnshieldRecipient = "self" | "other";
 
 function getDenominationLabel(denomination?: number | null): string {
   if (!denomination) return "Custom";
@@ -95,6 +96,7 @@ export default function SendPage() {
 
   // Unshield-specific state
   const [showUnshieldSuccess, setShowUnshieldSuccess] = useState(false);
+  const [unshieldRecipient, setUnshieldRecipient] = useState<UnshieldRecipient>("self");
 
   // Shielded transfer state
   const [shieldedSubMode, setShieldedSubMode] = useState<ShieldedSubMode>("send");
@@ -473,11 +475,32 @@ export default function SendPage() {
 
                   {selectedPosition && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                      <SectionHeader>Recipient Address</SectionHeader>
-                      <div className="bg-[rgba(0,0,0,0.3)] border border-border rounded-xl p-4 space-y-3">
-                        <input type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="Enter Solana address (leave empty for your wallet)" disabled={isLoading} className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50" />
-                        <p className="text-xs text-text-dim">Leave empty to send to your connected wallet, or enter any Solana address.</p>
+                      <SectionHeader>Send To</SectionHeader>
+                      <div className="flex gap-2 p-1 bg-[rgba(0,0,0,0.3)] rounded-lg">
+                        <button
+                          onClick={() => { setUnshieldRecipient("self"); setRecipientAddress(""); }}
+                          className={cn("flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all", unshieldRecipient === "self" ? "bg-terminal-green/20 text-terminal-green" : "text-text-dim hover:text-white")}
+                        >
+                          My Wallet
+                        </button>
+                        <button
+                          onClick={() => setUnshieldRecipient("other")}
+                          className={cn("flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all", unshieldRecipient === "other" ? "bg-terminal-green/20 text-terminal-green" : "text-text-dim hover:text-white")}
+                        >
+                          Other Wallet
+                        </button>
                       </div>
+                      {unshieldRecipient === "self" ? (
+                        <div className="bg-terminal-green/10 border border-terminal-green/30 rounded-xl p-4">
+                          <p className="text-sm text-terminal-green font-mono">{publicKey ? `${publicKey.slice(0, 8)}...${publicKey.slice(-6)}` : "Connected wallet"}</p>
+                          <p className="text-xs text-text-dim mt-1">Funds will be sent to your connected wallet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <input type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="Enter Solana address" disabled={isLoading} className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50" />
+                          <p className="text-xs text-text-dim">Enter any Solana wallet address</p>
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
@@ -496,8 +519,8 @@ export default function SendPage() {
 
                   <TransactionModal isOpen={isUnshieldLoading} progress={unshieldProgress} stage={unshieldStage} title="Sending" subtitle={selectedPosition ? `${formatSOL(selectedPosition.shieldedAmount)} SOL` : undefined} />
 
-                  <Button onClick={handleUnshield} loading={isUnshieldLoading} fullWidth size="lg" disabled={!selectedPosition || isLoading}>
-                    {isUnshieldLoading ? unshieldStage || "Processing..." : "Send to Wallet"}
+                  <Button onClick={handleUnshield} loading={isUnshieldLoading} fullWidth size="lg" disabled={!selectedPosition || isLoading || (unshieldRecipient === "other" && !recipientAddress.trim())}>
+                    {isUnshieldLoading ? unshieldStage || "Processing..." : unshieldRecipient === "self" ? "Send to My Wallet" : "Send to Wallet"}
                   </Button>
                 </CardContent>
               </Card>
