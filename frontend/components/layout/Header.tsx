@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { useWallet } from "@/hooks/useWallet";
 import { cn, formatAddress, formatAmount } from "@/lib/utils";
+import { LogOut } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -34,7 +35,7 @@ const appNavItems: NavItem[] = [
 
 export function Header() {
   const pathname = usePathname();
-  const { connected, publicKey, balance } = useWallet();
+  const { connected, publicKey, balance, disconnect } = useWallet();
 
   // Determine if on landing page (show landing header style)
   const isLandingPage = pathname === "/" || pathname === "/home";
@@ -149,11 +150,20 @@ export function Header() {
 
           {/* Wallet display when connected, otherwise Connect button */}
           {connected && publicKey ? (
-            <div className="text-[13px] text-text-dim px-4 py-2.5 bg-bg-card border border-border rounded-md flex items-center gap-2">
-              <span className="text-terminal-green" style={{ textShadow: "0 0 10px #00a088" }}>◎</span>
-              <span>{formatAmount(balance, 4)} SOL</span>
-              <span className="text-text-muted">·</span>
-              <span>{formatAddress(publicKey)}</span>
+            <div className="flex items-center gap-2">
+              <div className="text-[13px] text-text-dim px-4 py-2.5 bg-bg-card border border-border rounded-md flex items-center gap-2">
+                <span className="text-terminal-green" style={{ textShadow: "0 0 10px #00a088" }}>◎</span>
+                <span>{formatAmount(balance, 4)} SOL</span>
+                <span className="text-text-muted">·</span>
+                <span>{formatAddress(publicKey)}</span>
+              </div>
+              <button
+                onClick={disconnect}
+                className="p-2.5 bg-bg-card border border-border rounded-md text-text-dim hover:text-red-400 hover:border-red-400/50 transition-colors"
+                title="Disconnect wallet"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <ConnectButton />
