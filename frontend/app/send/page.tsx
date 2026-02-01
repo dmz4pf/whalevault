@@ -30,6 +30,14 @@ type ShieldedSubMode = "send" | "receive";
 type ImportInputMode = "paste" | "manual";
 type UnshieldRecipient = "self" | "other";
 
+const DELAY_PRESETS = [
+  { label: "Instant", ms: 0 },
+  { label: "1h", ms: 60 * 60 * 1000 },
+  { label: "6h", ms: 6 * 60 * 60 * 1000 },
+  { label: "12h", ms: 12 * 60 * 60 * 1000 },
+  { label: "24h", ms: 24 * 60 * 60 * 1000 },
+];
+
 function getDenominationLabel(denomination?: number | null): string {
   if (!denomination) return "Custom";
   const denom = FIXED_DENOMINATIONS.find((d) => d.value === denomination);
@@ -96,7 +104,8 @@ export default function SendPage() {
 
   // Unshield-specific state
   const [showUnshieldSuccess, setShowUnshieldSuccess] = useState(false);
-  const [unshieldRecipient, setUnshieldRecipient] = useState<UnshieldRecipient>("self");
+  const [unshieldRecipient, setUnshieldRecipient] = useState<UnshieldRecipient>("other");
+  const [delayMs, setDelayMs] = useState<number>(0);
 
   // Shielded transfer state
   const [shieldedSubMode, setShieldedSubMode] = useState<ShieldedSubMode>("send");
@@ -478,29 +487,61 @@ export default function SendPage() {
                       <SectionHeader>Send To</SectionHeader>
                       <div className="flex gap-2 p-1 bg-[rgba(0,0,0,0.3)] rounded-lg">
                         <button
+                          onClick={() => setUnshieldRecipient("other")}
+                          className={cn("flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all", unshieldRecipient === "other" ? "bg-terminal-green/20 text-terminal-green" : "text-text-dim hover:text-white")}
+                        >
+                          Recipient&apos;s Address
+                        </button>
+                        <button
                           onClick={() => { setUnshieldRecipient("self"); setRecipientAddress(""); }}
                           className={cn("flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all", unshieldRecipient === "self" ? "bg-terminal-green/20 text-terminal-green" : "text-text-dim hover:text-white")}
                         >
                           My Wallet
                         </button>
-                        <button
-                          onClick={() => setUnshieldRecipient("other")}
-                          className={cn("flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all", unshieldRecipient === "other" ? "bg-terminal-green/20 text-terminal-green" : "text-text-dim hover:text-white")}
-                        >
-                          Other Wallet
-                        </button>
                       </div>
-                      {unshieldRecipient === "self" ? (
-                        <div className="bg-terminal-green/10 border border-terminal-green/30 rounded-xl p-4">
-                          <p className="text-sm text-terminal-green font-mono">{publicKey ? `${publicKey.slice(0, 8)}...${publicKey.slice(-6)}` : "Connected wallet"}</p>
-                          <p className="text-xs text-text-dim mt-1">Funds will be sent to your connected wallet</p>
+                      {unshieldRecipient === "other" ? (
+                        <div className="space-y-3">
+                          <input type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="Enter Solana address" disabled={isLoading} className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50" />
+                          <p className="text-xs text-text-dim">Enter any Solana wallet address for maximum privacy</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          <input type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="Enter Solana address" disabled={isLoading} className="w-full px-4 py-3 rounded-xl bg-[rgba(0,0,0,0.4)] border border-terminal-green text-white font-mono text-sm placeholder-text-dim focus:outline-none disabled:opacity-50" />
-                          <p className="text-xs text-text-dim">Enter any Solana wallet address</p>
+                          <div className="bg-terminal-green/10 border border-terminal-green/30 rounded-xl p-4">
+                            <p className="text-sm text-terminal-green font-mono">{publicKey ? `${publicKey.slice(0, 8)}...${publicKey.slice(-6)}` : "Connected wallet"}</p>
+                          </div>
+                          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
+                            <div className="flex items-start gap-2">
+                              <span className="text-yellow-400 text-sm">!</span>
+                              <p className="text-xs text-yellow-400/90">Sending to your own wallet creates an on-chain link. For maximum privacy, use a fresh address.</p>
+                            </div>
+                          </div>
                         </div>
                       )}
+                    </motion.div>
+                  )}
+
+                  {selectedPosition && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                      <SectionHeader>Privacy Delay</SectionHeader>
+                      <div className="flex gap-2">
+                        {DELAY_PRESETS.map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setDelayMs(preset.ms)}
+                            disabled={isLoading}
+                            className={cn(
+                              "flex-1 py-3 rounded-lg font-mono text-sm transition-all",
+                              delayMs === preset.ms
+                                ? "bg-terminal-green text-bg"
+                                : "bg-bg-card border border-border text-text-dim hover:border-terminal-dark"
+                            )}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-text-dim">Adding a delay makes it harder to correlate your deposit and withdrawal timing.</p>
                     </motion.div>
                   )}
 
