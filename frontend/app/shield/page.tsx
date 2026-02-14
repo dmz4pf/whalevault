@@ -291,7 +291,7 @@ export default function ShieldPage() {
 
             {/* Fixed Pool Grid */}
             {mode === "fixed" && (
-              <div className="grid grid-cols-3 gap-[15px] mb-[25px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[15px] mb-[25px]">
                 {FIXED_DENOMINATIONS.map((denom, index) => {
                   const pool = pools.find((p: PoolInfo) => p.denomination === denom.value);
                   const depositCount = pool?.depositCount ?? 0;

@@ -43,7 +43,7 @@ export default function RootLayout({
           <WalletRedirect />
           {/* Background Effects - only on non-splash pages */}
           {!isSplash && (
-            <>
+            <div className="hidden md:block">
               <BinaryRain opacity={0.05} />
               <HexStream opacity={0.1} />
               <CRTEffects />
@@ -53,7 +53,7 @@ export default function RootLayout({
                   background: 'radial-gradient(ellipse at 50% 40%, rgba(0, 160, 136, 0.04) 0%, transparent 50%)'
                 }}
               />
-            </>
+            </div>
           )}
 
           <div className="relative min-h-screen" style={{ zIndex: 10 }}>

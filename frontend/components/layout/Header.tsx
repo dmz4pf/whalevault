@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { useWallet } from "@/hooks/useWallet";
 import { cn, formatAddress, formatAmount } from "@/lib/utils";
+import { MobileNav } from "./MobileNav";
 
 interface NavItem {
   href: string;
@@ -64,16 +65,19 @@ export function Header() {
       >
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-[72px]">
-            {/* Logo */}
-            <Link href="/home" className="flex items-center gap-1">
-              <span className="text-terminal-green animate-cursor-blink" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
-              <span
-                className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
-                style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
-              >
-                whalevault
-              </span>
-            </Link>
+            {/* Logo + Mobile Nav */}
+            <div className="flex items-center gap-2">
+              <MobileNav isLanding={true} />
+              <Link href="/home" className="flex items-center gap-1">
+                <span className="text-terminal-green animate-cursor-blink" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
+                <span
+                  className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
+                  style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
+                >
+                  whalevault
+                </span>
+              </Link>
+            </div>
 
             {/* Centered Landing Nav - white text with glow on active */}
             <nav className="hidden md:flex items-center gap-[50px] absolute left-1/2 -translate-x-1/2">
@@ -114,16 +118,19 @@ export function Header() {
     >
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-[72px]">
-          {/* Logo */}
-          <Link href="/home" className="flex items-center gap-1">
-            <span className="text-terminal-green animate-cursor-blink" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
-            <span
-              className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
-              style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
-            >
-              whalevault
-            </span>
-          </Link>
+          {/* Logo + Mobile Nav */}
+          <div className="flex items-center gap-2">
+            <MobileNav isLanding={false} />
+            <Link href="/home" className="flex items-center gap-1">
+              <span className="text-terminal-green animate-cursor-blink" style={{ textShadow: "0 0 15px #00a088" }}>{">"}</span>
+              <span
+                className="text-terminal-green font-heading text-[22px] font-bold tracking-[2px]"
+                style={{ textShadow: "0 0 25px #00a088, 0 0 50px rgba(0, 160, 136, 0.3)" }}
+              >
+                whalevault
+              </span>
+            </Link>
+          </div>
 
           {/* Centered App Nav - white text, pill styling for active */}
           <nav className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">

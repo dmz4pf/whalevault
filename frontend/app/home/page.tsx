@@ -257,7 +257,7 @@ export default function LandingPage() {
           >
             {">"} whalevault
           </div>
-          <div className="flex gap-12">
+          <div className="flex flex-wrap gap-6 md:gap-12 justify-center md:justify-start">
             {[
               { label: "DOCS", href: "https://docs.whalevault.io" },
               { label: "GITHUB", href: "https://github.com" },

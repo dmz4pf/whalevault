@@ -59,7 +59,7 @@ export function PageHeader({ title, subtitle, rightContent }: PageHeaderProps) {
     >
       <div className="space-y-[10px]">
         <h1
-          className="font-heading text-[26px] font-semibold text-terminal-green"
+          className="font-heading text-xl md:text-[26px] font-semibold text-terminal-green"
           style={{ textShadow: "0 0 20px rgba(0, 160, 136, 0.3)" }}
         >
           {displayedTitle}

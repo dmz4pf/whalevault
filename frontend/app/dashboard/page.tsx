@@ -187,7 +187,7 @@ export default function DashboardPage() {
       />
 
       {/* Two Column Layout */}
-      <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 380px" }}>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_380px]">
         {/* Left Column */}
         <div className="space-y-6">
           {/* Account Status */}
@@ -201,7 +201,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.3 }}
               className="bg-[rgba(0,160,136,0.06)] border border-[rgba(0,160,136,0.15)] rounded-2xl p-10"
             >
-              <div className="flex items-start gap-12">
+              <div className="flex flex-col md:flex-row items-start gap-6 md:gap-12">
                 <div className="pl-2">
                   <PrivacyRing score={privacyScore} />
                 </div>
