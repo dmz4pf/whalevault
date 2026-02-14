@@ -237,7 +237,8 @@ export default function HistoryPage() {
                 </Link>
               </div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-4 text-text-muted font-normal text-xs tracking-wider">TYPE</th>
@@ -336,6 +337,7 @@ export default function HistoryPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </motion.div>
         </div>
