@@ -28,7 +28,11 @@ WhaleVault is a privacy layer for Solana. It lets users shield their assets into
 
 ## Screenshots
 
-![WhaleVault Landing](docs/images/landing.png)
+![Dashboard](docs/images/dashboard.png)
+
+| Shield | Send | Swap |
+|--------|------|------|
+| ![Shield](docs/images/shield.png) | ![Send](docs/images/send.png) | ![Swap](docs/images/swap.png) |
 
 ---
 
