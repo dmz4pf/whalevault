@@ -1,74 +1,114 @@
-# WhaleVault
+# WhaleVault — Privacy-Preserving Vault for Solana
 
-A privacy layer for Solana powered by zero-knowledge proofs.
+> Shield, send, and swap Solana assets with zero-knowledge proof privacy.
 
-## Overview
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Solana](https://img.shields.io/badge/Solana-mainnet-9945FF)](https://solana.com/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-WhaleVault enables private transactions on Solana through fixed-denomination pools, zkSNARK proofs, and relayer-based withdrawals. Every Solana transaction is public—WhaleVault makes yours invisible.
+![WhaleVault Landing](docs/images/landing.png)
+
+## Live Demo
+
+**[→ whalevault.vercel.app](https://whalevault.vercel.app)**
+
+Connect a Solana wallet to explore the full app.
+
+---
+
+## What Is WhaleVault?
+
+WhaleVault is a privacy layer for Solana. It lets users shield their assets into a private pool using zero-knowledge proofs — meaning transactions are verifiable on-chain but the amounts and parties involved remain private.
+
+---
+
+## Screenshots
+
+| Landing | Shield |
+|---------|--------|
+| ![Landing](docs/images/landing.png) | ![Shield](docs/images/shield.png) |
+
+---
 
 ## Features
 
-- **Shield** - Deposit SOL into fixed-denomination pools (1 SOL, 10 SOL) creating an anonymity set
-- **Send to Wallet** - Withdraw privately to any address using zkSNARK proofs
-- **Send Shielded Position** - Transfer ownership without unshielding (maximum privacy)
-- **Private Swap** - Swap shielded SOL for other tokens via DEX aggregators
+- **ZK Proof Shielding** — Deposit assets into a private pool using zkSNARK proofs
+- **Private Transfers** — Send shielded assets to any address without revealing amount
+- **Private Swap** — Swap assets within the privacy pool
+- **Transaction History** — View your private transaction history
+- **Nullifier System** — Prevents double-spending within the privacy pool
+- **Merkle Tree** — Cryptographic proof of inclusion without revealing identity
+- **Non-Custodial** — You control your keys at all times
 
-## How It Works
-
-**Shielding**: The Veil SDK generates commitments and random secrets. SOL is deposited into the pool and the commitment is added to an on-chain Merkle tree.
-
-**Withdrawing**: A Groth16 zkSNARK proof verifies ownership without revealing which deposit is yours. A relayer submits the transaction—your wallet never signs the withdrawal.
-
-**Private Transfers**: The sender's commitment is nullified and a new commitment is created for the recipient. Funds never leave the pool—only ownership changes on-chain.
-
-**Private Swaps**: After unshielding, the relayer executes token swaps before sending to the recipient.
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| Frontend | Next.js, Helius RPC |
-| Backend | FastAPI, Veil SDK |
-| Cryptography | Groth16 proofs (arkworks/Rust), Poseidon hash, Pedersen commitments |
-| On-chain | Anchor program, groth16-solana verifier |
-| Swaps | Raydium API (devnet), Jupiter (mainnet) |
-| Storage | Supabase |
+|-------|-----------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Blockchain | Solana Web3.js |
+| Privacy | Zero-Knowledge Proofs (zkSNARKs) |
+| State | Zustand |
+| UI | shadcn/ui |
+| Deployment | Vercel |
 
-## Future Plans
+---
 
-### Near-Term Enhancements
-- **Additional denomination pools** (0.1, 5, 50 SOL) for more flexibility
-- **Privacy delay scheduling** - Users choose when withdrawals execute, breaking timing correlations
-- **Enhanced transaction history** with privacy scores and anonymity set metrics
+## How It Works
 
-### Technical Innovations
-- **Decentralized relayer network** - Remove single point of trust, multiple independent relayers compete to submit transactions
-- **Stealth addresses** - Recipients generate one-time addresses, no need to share public keys
-- **Batch proofs** - Aggregate multiple withdrawals into single transactions for lower fees
+```
+User deposits SOL/tokens
+        │
+        ▼
+ZK proof generated client-side
+(proves ownership without revealing amount)
+        │
+        ▼
+Commitment added to on-chain Merkle tree
+(verifiable but private)
+        │
+        ▼
+Nullifier stored to prevent double-spend
+        │
+        ▼
+User can withdraw to any address
+with a fresh ZK proof
+```
 
-### Ecosystem Expansion
-- **SPL token support** - Shield USDC, BONK, and other Solana tokens
-- **Developer SDK** - Enable other dApps to integrate private payments
-- **Private NFT transfers** - Extend privacy to digital collectibles
+The key insight: the proof says "I know a secret that corresponds to a valid deposit" — without revealing *which* deposit or *how much*.
 
-### Long-Term Vision
-- **Cross-chain bridges** - Private transfers to/from EVM chains
-- **Mobile application** - Native iOS/Android experience
-- **Institutional compliance mode** - Optional proof-of-source for regulated entities
+---
 
-## Local Development
+## Running Locally
 
 ```bash
-# Frontend
-cd frontend
+git clone https://github.com/dmz4pf/whalevault.git
+cd whalevault
 npm install
+cp .env.example .env.local
 npm run dev
-
-# Backend
-cd backend
-source venv/bin/activate
-uvicorn main:app --reload --port 8000
 ```
+
+---
+
+## Architecture
+
+```
+src/
+├── app/              # Next.js App Router pages
+├── components/       # UI components
+│   ├── shield/       # Shielding interface
+│   ├── send/         # Private transfer
+│   └── swap/         # Private swap
+├── lib/
+│   ├── zk/           # ZK proof generation & verification
+│   ├── solana/       # Solana Web3.js integration
+│   └── merkle/       # Merkle tree implementation
+└── stores/           # Zustand state management
+```
+
+---
 
 ## License
 
